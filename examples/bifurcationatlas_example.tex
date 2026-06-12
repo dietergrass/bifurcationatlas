@@ -112,17 +112,18 @@
 }
 }
 
+
+\begin{document}
 \baSetup{
   region scale = 1.25,
   region radius = 6.75,
   caption style = \footnotesize,
   figure scale = 0.35,
-  caption label = arabic
+  caption label = alpha
 }
 
-\begin{document}
-
 \begin{bifurcationatlas}
+\label{ba:test1}
 \centering
 % =========================================================
 % ATLAS RENDERING
@@ -157,9 +158,15 @@
 % Each region can be referenced via:
 %   \label{ba:R1}, \label{ba:R2}, ...
 % =========================================================
-As shown in Region~\ref{ba:1:1}, the system is stable.
+As shown in Region~\basubref{ba:test1.1}, the system is stable.
+As shown in Fig~\ref{ba:test1.1}, the system is stable.
+
+\baSetup{
+  caption label = roman
+}
 
 \begin{bifurcationatlas}
+\label{ba:test2}
 \centering
 % =========================================================
 % ATLAS RENDERING
@@ -186,7 +193,7 @@ As shown in Region~\ref{ba:1:1}, the system is stable.
 \caption{Structured cartel bifurcation atlas}
 
 \end{bifurcationatlas}
-As shown in Region~\ref{ba:2:3}, the system is stable.
+As shown in Region~\ref{ba:test2.1}, the system is stable.
 
 
 \end{document}
