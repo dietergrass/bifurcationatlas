@@ -1,0 +1,37 @@
+\definecolor{baKeyword}{RGB}{0, 92, 184}
+\definecolor{baComment}{RGB}{120, 120, 120}
+\definecolor{baString}{RGB}{160, 0, 0}
+
+\lstdefinelanguage{LaTeX}{
+  language=TeX,
+  % -------------------------------------------------
+  % Keywords (LaTeX commands you want highlighted)
+  % -------------------------------------------------
+  morekeywords={
+    documentclass,usepackage,
+    begin,end,
+    section,subsection,subsubsection,
+    newcommand,renewcommand,providecommand,
+    pgfkeys,tikzset,
+    includegraphics,ifcsname
+  },
+  % -------------------------------------------------
+  % Comment style
+  % -------------------------------------------------
+  morecomment=[l]{\%},
+  % -------------------------------------------------
+  % String style
+  % -------------------------------------------------
+  morestring=[b]",
+  % -------------------------------------------------
+  % Styling
+  % -------------------------------------------------
+  keywordstyle=\color{baKeyword}\bfseries,
+  commentstyle=\color{baComment}\itshape,
+  stringstyle=\color{baString},
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false
+}

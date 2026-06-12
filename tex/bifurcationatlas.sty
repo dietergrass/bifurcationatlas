@@ -1,0 +1,262 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{bifurcationatlas}[2026/06/10 Structured bifurcation diagram toolkit]
+
+% =========================================================
+% REQUIRED PACKAGES
+% =========================================================
+\RequirePackage{tikz}
+\RequirePackage{xparse}
+\RequirePackage{graphicx}
+\RequirePackage{pgfkeys}
+\RequirePackage{pgffor}
+\RequirePackage{newfloat}
+
+% =========================================================
+% 0. GLOBAL DEFAULT PARAMETERS (USER CONFIGURATION STATE)
+% =========================================================
+% These are fallback values always defined in TeX.
+% They are overwritten via pgfkeys (/ba setup layer).
+% =========================================================
+
+\newcommand{\ba@region@scale}{1.25}
+\newcommand{\ba@region@radius}{6}
+\newcommand{\ba@caption@style}{\scriptsize}
+\newcommand{\ba@figure@scale}{0.25}
+\newcommand{\ba@caption@shift}{-3mm}   % default vertical spacing
+\newcommand{\ba@caption@label}{roman} % alpha | roman | arabic
+
+% counters for captions + labeling
+\newcounter{baRegionCaption}
+\newcounter{baRegion}
+
+% =========================================================
+% 1. PGFKEYS SYSTEM (USER CONFIGURATION INTERFACE)
+% =========================================================
+
+\pgfkeys{
+  /ba/internal/.is family,
+  /ba/internal,
+  region colors/.store in=\ba@colors,
+  region caption/.store in=\ba@caption
+}
+
+% --- main configuration family ---
+\pgfkeys{
+  /ba/.is family,
+  /ba,
+  region scale/.code   = {\renewcommand{\ba@region@scale}{#1}},
+  region radius/.code  = {\renewcommand{\ba@region@radius}{#1}},
+  caption style/.code  = {\renewcommand{\ba@caption@style}{#1}},
+  figure scale/.code   = {\renewcommand{\ba@figure@scale}{#1}},
+  caption shift/.code  = {\renewcommand{\ba@caption@shift}{#1}},
+  caption label/.code  = {\renewcommand{\ba@caption@label}{#1}}
+}
+
+\pgfkeys{
+  /ba/caption label/.is choice,
+  /ba/caption label/alpha/.code  = {\def\ba@caption@labelcmd{(\alph{baRegionCaption})}},
+  /ba/caption label/roman/.code  = {\def\ba@caption@labelcmd{(\roman{baRegionCaption})}},
+  /ba/caption label/Roman/.code  = {\def\ba@caption@labelcmd{(\Roman{baRegionCaption})}},
+  /ba/caption label/arabic/.code = {\def\ba@caption@labelcmd{(\arabic{baRegionCaption})}}
+}
+\def\ba@fmtcaption{\alph{baRegionCaption}}
+\newcommand{\baFormatCaptionLabel}{(\ba@fmtcaption)}
+%\newcommand{\baFormatCaptionLabel}{%
+%  \ifx\ba@caption@label\@empty
+%    (\alph{baRegionCaption})%
+%  \else\if\ba@caption@label alpha
+%    (\alph{baRegionCaption})%
+%  \else\if\ba@caption@label roman
+%    (\roman{baRegionCaption})%
+%  \else\if\ba@caption@label Roman
+%    (\Roman{baRegionCaption})%
+%  \else\if\ba@caption@label arabic
+%    (\arabic{baRegionCaption})%
+%  \else
+%    (\alph{baRegionCaption})%
+%  \fi\fi\fi\fi\fi
+%}
+
+% user-facing setup command
+\newcommand{\baSetup}[1]{%
+  \pgfkeys{/ba,#1}%
+}
+
+% =========================================================
+% 2. REGION DEFINITION SYSTEM
+% =========================================================
+% Stores:
+% - color list (for rendering)
+% - optional caption
+% =========================================================
+
+\NewDocumentCommand{\baDeclareRegion}{O{} m m}{%
+  % #1 optional caption
+  % #2 region name
+  % #3 comma-separated color list
+
+  \tikzset{
+    ba/region/#2/.style={
+      /ba/internal/region colors={#3}
+    }
+  }
+
+  % store caption (may be empty)
+  \expandafter\gdef\csname ba@caption@#2\endcsname{#1}
+}
+
+% =========================================================
+% 3. INTERNAL COLOR SYSTEM
+% =========================================================
+
+% safe color lookup
+\newcommand{\ba@getcolor}[1]{%
+  \ifcsname ba@c#1\endcsname
+    \csname ba@c#1\endcsname%
+  \else
+    white%
+  \fi
+}
+
+% retrieve caption
+\newcommand{\baGetRegionCaption}[1]{%
+  \ifcsname ba@caption@#1\endcsname
+    \csname ba@caption@#1\endcsname
+  \fi
+}
+
+% expand region color list into indexed macros
+\newcommand{\baPrepareColors}{%
+  \let\colors\ba@colors%
+  \foreach [count=\i] \c in \colors {%
+    \expandafter\xdef\csname ba@c\i\endcsname{\c}%
+  }%
+}
+
+% public wrapper
+\newcommand{\baGetColor}[1]{\ba@getcolor{#1}}
+
+% =========================================================
+% 4. PIC SYSTEM (USER GEOMETRY PRIMITIVES)
+% =========================================================
+% User defines reusable TikZ pictures
+% =========================================================
+
+\newcommand{\baNewPic}[2]{%
+  \tikzset{
+    #1/.pic={%
+      \baPrepareColors%
+      #2%
+    }
+  }%
+}
+
+% =========================================================
+% 5. RENDERING LAYER
+% =========================================================
+% Renders a pic with region styling + scaling
+% =========================================================
+
+\newcommand{\baRenderRegion}[2]{%
+\scalebox{\ba@region@scale}{%
+\begin{tikzpicture}
+    \pic[ba/region/#2]{#1};
+\end{tikzpicture}}%
+}
+
+% =========================================================
+% 6. LAYOUT SYSTEM (RADIAL GEOMETRY)
+% =========================================================
+
+% place node on circle
+\newcommand{\baPlaceRadialNode}[3]{%
+  \pgfmathsetmacro{\ba@angle}{90-(#1-1)*360/#2}%
+  \node at (\ba@angle:\ba@region@radius) {#3};
+}
+
+
+% radial atlas layout
+\newcommand{\baRadialAtlas}[2]{%
+% #1 = region list
+% #2 = pic template
+
+  %\setcounter{baRegionCaption}{#1}
+  %\setcounter{baRegion}{#1}
+
+  % determine number of regions
+  \foreach \r [count=\i] in {#1}{%
+    \xdef\baLastIndex{\i}%
+  }%
+
+  % place regions
+  \foreach \r [count=\i] in {#1}{%
+
+    \stepcounter{baRegionCaption}%
+    \refstepcounter{baRegion}%
+
+    \edef\baTmpCaption{\baGetRegionCaption{\r}}%
+
+    \baPlaceRadialNode{\i}{\baLastIndex}{%
+      \begin{tabular}{c}
+        \baRenderRegion{#2}{\r} \\[2mm]
+
+        % optional caption
+        \if\relax\detokenize{\baTmpCaption}\relax
+        \else
+          {\ba@caption@style \baFormatCaptionLabel~\baTmpCaption}\\\\
+        \fi
+
+        % label anchor
+        \label{ba:\r}
+      \end{tabular}
+    }%
+  }%
+}
+
+% =========================================================
+% 7. ATLAS FIGURE HELPER
+% =========================================================
+% Background image + radial overlay
+% =========================================================
+
+\NewDocumentCommand{\baAtlasFigure}{O{} m m m}{%
+% #1 = optional caption
+% #2 = label offset
+% #3 = background image
+% #4 = region list
+% #5 = pic template
+
+\begin{tikzpicture}
+
+  % -----------------------------------------------------
+  % background image
+  % -----------------------------------------------------
+  \node (bg) at (0,0) {\includegraphics[scale=\ba@figure@scale]{#2}};
+% ---------------------------------------------------------
+% optional caption below figure
+% ---------------------------------------------------------
+\setcounter{baRegion}{0}
+ \setcounter{baRegionCaption}{0}
+\if\relax\detokenize{#1}\relax
+	\def\ba@offset{0}
+\else
+	\def\ba@offset{1}
+	\node[anchor=north]
+	  at ([yshift=-\ba@caption@shift]bg.south)
+	  {\ba@caption@style \baFormatCaptionLabel~#1};
+\fi
+
+  % -----------------------------------------------------
+  % set global offset for region numbering
+  % -----------------------------------------------------
+  \setcounter{baRegion}{\ba@offset}
+  \setcounter{baRegionCaption}{\ba@offset}
+
+  % -----------------------------------------------------
+  % overlay radial atlas
+  % -----------------------------------------------------
+  \baRadialAtlas{#3}{#4}
+
+\end{tikzpicture}
+
+}
