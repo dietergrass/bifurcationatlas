@@ -1,0 +1,146 @@
+\documentclass{article}
+
+% =========================================================
+% PACKAGE LOADING
+% =========================================================
+% Load the bifurcation atlas package which defines:
+% - \baNewPic
+% - \baDeclareRegion
+% - \baAtlasFigure
+% - configuration system (\baSetup)
+% =========================================================
+\usepackage{bifurcationatlas}
+
+\usepackage{graphicx}
+
+% Optional directory for external figures (e.g. PDF diagrams)
+\graphicspath{{./fig/}}
+
+% =========================================================
+% GLOBAL COLOR DEFINITIONS
+% =========================================================
+% These are standard LaTeX colors used indirectly in region definitions.
+% They are NOT accessed directly in TikZ pics, but referenced via:
+%   \baDeclareRegion{...}{color1,color2,...}
+% =========================================================
+\definecolor{HHEqui}{RGB}{0, 114, 178} % blue
+\definecolor{HLEqui}{RGB}{230, 159, 0} % orange
+\definecolor{MEqui}{RGB}{0, 158, 115}  % teal
+\definecolor{LLEqui}{RGB}{204, 121, 167} % purple
+
+% =========================================================
+% PIC TEMPLATE DEFINITION
+% =========================================================
+% This defines a reusable TikZ picture called "Test".
+%
+% Key idea:
+% - This is a template, not a fixed drawing
+% - Colors are injected dynamically via region selection
+% - \baGetColor{1..4} selects region-dependent colors
+%
+% Each region provides a different color configuration.
+% =========================================================
+\baNewPic{Test}{
+	
+    % -----------------------------------------------------
+    % Bottom-left tile (color index 1 of region)
+    % -----------------------------------------------------
+    \fill[\baGetColor{1}] (0,0) rectangle (1,1);
+
+    % -----------------------------------------------------
+    % Bottom-right tile (color index 2)
+    % -----------------------------------------------------
+    \fill[\baGetColor{2}] (1,0) rectangle (2,1);
+
+    % -----------------------------------------------------
+    % Top-left tile (color index 3)
+    % -----------------------------------------------------
+    \fill[\baGetColor{3}] (0,1) rectangle (1,2);
+
+    % -----------------------------------------------------
+    % Top-right tile (color index 4)
+    % -----------------------------------------------------
+    \fill[\baGetColor{4}] (1,1) rectangle (2,2);
+
+    % -----------------------------------------------------
+    % Structural grid overlay
+    % -----------------------------------------------------
+    \draw[line width=2pt,black] (0,2) -- (0,0) -- (2,0);
+    \draw (0,1) -- (2,1);
+    \draw (1,0) -- (1,2);
+
+    % -----------------------------------------------------
+    % Optional reference axis highlight
+    % -----------------------------------------------------
+    \draw[line width=2pt,red] (0,0.04) -- (0,2);
+}
+
+% =========================================================
+% REGION DEFINITIONS (DATA LAYER)
+% =========================================================
+% Each region maps to a list of 4 colors.
+%
+% Interpretation example:
+%   R1 = [LLEqui, HLEqui, HHEqui, HHEqui]
+%
+% These values are expanded internally into:
+%   \baGetColor{1}, \baGetColor{2}, ...
+% =========================================================
+\baDeclareRegion[Region 1]{R1}{LLEqui,HLEqui,HHEqui,HHEqui}
+\baDeclareRegion[Region 2]{R2}{LLEqui,HLEqui,HHEqui,MEqui}
+\baDeclareRegion[Region 3]{R3}{LLEqui,HLEqui,MEqui,MEqui}
+\baDeclareRegion[Region 4]{R4}{LLEqui,HLEqui,HLEqui,HLEqui}
+\baDeclareRegion[Region 5]{R5}{LLEqui,LLEqui,LLEqui,HLEqui}
+\baDeclareRegion[Region 6]{R6}{LLEqui,HLEqui,HHEqui,HLEqui}
+\baDeclareRegion[Region 7]{R7}{LLEqui,HHEqui,HHEqui,HHEqui}
+
+% =========================================================
+% ATLAS CONFIGURATION
+% =========================================================
+% Global configuration of rendering parameters:
+%
+% region scale   -> size of each region rendering
+% region radius  -> radial distance from center
+% caption style  -> font style for region captions
+% figure scale   -> scaling of background image
+% =========================================================
+\baSetup{
+  region scale = 1.25,
+  region radius = 6.75,
+  caption style = \footnotesize,
+  figure scale = 0.35,
+  caption label = arabic
+}
+
+\begin{document}
+
+\begin{figure}
+\centering
+% =========================================================
+% ATLAS RENDERING
+% =========================================================
+% \baAtlasFigure combines:
+%   (1) background bifurcation diagram (PDF)
+%   (2) radial layout of region renderings
+%   (3) region-specific pic template ("Test")
+%
+% Arguments:
+%   1: background image
+%   2: list of regions
+%   3: pic template name
+% =========================================================
+\baAtlasFigure[Bifurcation Diagram]{bifurcation}{R1,R2,R3,R4,R5,R6,R7}{Test}
+
+\caption{Structured bifurcation atlas}
+
+\end{figure}
+
+% =========================================================
+% CROSS-REFERENCE EXAMPLE
+% =========================================================
+% Each region can be referenced via:
+%   \label{ba:R1}, \label{ba:R2}, ...
+% =========================================================
+As shown in Region~\ref{ba:R1}, the system is stable.
+
+\end{document}
