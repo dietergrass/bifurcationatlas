@@ -1,0 +1,26 @@
+Name: bifurcationatlas
+Author: Dieter G.
+Email: <your-email@example.com>
+License: MIT
+Version: 1.0.0
+Summary: TikZ-based toolkit for structured bifurcation diagrams in LaTeX.
+
+Description:
+The bifurcationatlas package provides a structured interface for generating
+bifurcation diagrams using TikZ. It supports overlaying labeled regions on
+top of background figures, automatic indexing of regions, and optional
+caption handling with dynamic label adjustment.
+
+Repository: <your-repository-url>
+Documentation: <your-docs-url>
+
+Dependencies:
+- tikz
+- xparse
+- graphicx
+- pgf
+
+Files:
+- bifurcationatlas.sty
+- README.md
+- LICENSE

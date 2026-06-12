@@ -1,0 +1,332 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{bifurcationatlas}[2026/06/10 Structured bifurcation diagram toolkit]
+
+% =========================================================
+% BIFURCATION ATLAS PACKAGE
+% =========================================================
+% This package provides a structured system for building
+% bifurcation diagram atlases composed of:
+%
+%   - region declarations
+%   - reusable TikZ pics
+%   - radial layout rendering
+%   - floating atlas environment
+%
+% The design separates:
+%   (1) structural indexing (regions)
+%   (2) visual indexing (captions)
+%   (3) rendering logic (TikZ)
+% =========================================================
+
+
+% =========================================================
+% REQUIRED PACKAGES
+% =========================================================
+\RequirePackage{tikz}
+\RequirePackage{xparse}
+\RequirePackage{graphicx}
+\RequirePackage{pgfkeys}
+\RequirePackage{pgffor}
+\RequirePackage{newfloat}
+\RequirePackage{etoolbox}
+\RequirePackage{hyperref}
+
+% =========================================================
+% 0. USER CONFIGURATION (DEFAULT PARAMETERS)
+% =========================================================
+% These macros define global visual defaults.
+% They are overwritten via \baSetup (/ba key interface).
+% =========================================================
+
+\newcommand{\ba@region@scale}{1.25}
+\newcommand{\ba@region@radius}{6}
+\newcommand{\ba@caption@style}{\scriptsize}
+\newcommand{\ba@figure@scale}{0.25}
+\newcommand{\ba@caption@shift}{-3mm}
+
+% caption formatting function (default = alphabetic)
+\def\ba@fmtcaption{\alph{baAtlasCaption}}
+\newcommand{\baFormatCaptionLabel}{(\ba@fmtcaption)}
+
+\newcommand{\baAtlasID}{\arabic{baAtlasID}}
+
+% =========================================================
+% ATLAS COUNTERS (GLOBAL VISUAL STATE)
+% =========================================================
+% baAtlasRegion   : counts rendered regions
+% baAtlasCaption  : caption index (may be shifted by header)
+% =========================================================
+
+\newcounter{baAtlasRegion}
+\newcounter{baAtlasCaption}
+\newcounter{baAtlasID}
+
+% =========================================================
+% FLOATING ENVIRONMENT
+% =========================================================
+% Provides figure-like behavior for bifurcation atlases.
+% =========================================================
+
+\DeclareFloatingEnvironment[
+  fileext=loa,
+  listname={List of Bifurcation Atlases},
+  name=Bifurcation Atlas,
+  placement=htbp
+]{bifurcationatlas}
+
+
+% =========================================================
+% 1. ATLAS STATE MANAGEMENT
+% =========================================================
+
+\newif\ifba@inatlas
+\ba@inatlasfalse
+
+% Ensures commands are only used inside atlas environment
+\newcommand{\baRequireAtlas}{%
+  \ifba@inatlas\else
+    \PackageError{bifurcationatlas}
+      {Command used outside bifurcationatlas environment}
+      {Wrap it in \texttt{bifurcationatlas}.}
+  \fi
+}
+
+% Environment lifecycle hooks
+\AtBeginEnvironment{bifurcationatlas}{%
+  \global\ba@inatlastrue
+
+  \stepcounter{baAtlasID}
+
+  % reset counters per atlas
+  \setcounter{baAtlasRegion}{0}
+  \setcounter{baAtlasCaption}{0}
+  % reset internal storage
+  \def\ba@regionlist{}
+  \def\ba@colors{}
+  \def\ba@caption{}
+}
+
+\AtEndEnvironment{bifurcationatlas}{%
+  \global\ba@inatlasfalse
+}
+
+
+% =========================================================
+% 2. PGFKEY CONFIGURATION SYSTEM
+% =========================================================
+% User interface: \baSetup{...}
+% =========================================================
+\pgfkeys{
+  /ba/.is family,
+  /ba,
+  % =====================================================
+  % USER-FACING KEYS
+  % =====================================================
+  region scale/.code   = {\renewcommand{\ba@region@scale}{#1}},
+  region radius/.code  = {\renewcommand{\ba@region@radius}{#1}},
+  caption style/.code  = {\renewcommand{\ba@caption@style}{#1}},
+  figure scale/.code   = {\renewcommand{\ba@figure@scale}{#1}},
+  caption shift/.code  = {\renewcommand{\ba@caption@shift}{#1}},
+  % =====================================================
+  % INTERNAL KEYS
+  % =====================================================
+  internal/region colors/.store in=\ba@colors,
+  internal/region caption/.store in=\ba@caption,
+  % =====================================================
+  % CAPTION FORMATTING (PUBLIC API)
+  % =====================================================
+  caption label/.is choice,
+  /ba/caption label/alpha/.code  = {\def\ba@fmtcaption{\alph{baAtlasCaption}}},
+  /ba/caption label/roman/.code  = {\def\ba@fmtcaption{\roman{baAtlasCaption}}},
+  /ba/caption label/Roman/.code  = {\def\ba@fmtcaption{\Roman{baAtlasCaption}}},
+  /ba/caption label/arabic/.code = {\def\ba@fmtcaption{\arabic{baAtlasCaption}}}
+}
+% user-facing setup command
+\newcommand{\baSetup}[1]{\pgfkeys{/ba,#1}}
+
+
+% =========================================================
+% 3. REGION REGISTRY SYSTEM
+% =========================================================
+% Each region stores:
+%   - identifier
+%   - color list (for rendering)
+%   - optional caption text
+% =========================================================
+
+\NewDocumentCommand{\baDeclareRegion}{O{} m m}{%
+  \baRequireAtlas
+
+  % register region name
+  \gappto\ba@regionlist{#2,}
+
+  % store caption (may be empty)
+  \expandafter\gdef\csname ba@caption@#2\endcsname{#1}
+
+  % attach color list via TikZ style
+  \tikzset{
+    ba/region/#2/.style={
+      /ba/internal/region colors={#3}
+    }
+  }
+}
+
+
+% =========================================================
+% 4. INTERNAL DATA ACCESS
+% =========================================================
+
+% retrieve region caption safely
+\newcommand{\baGetRegionCaption}[1]{%
+  \ifcsname ba@caption@#1\endcsname
+    \csname ba@caption@#1\endcsname
+  \fi
+}
+
+
+% =========================================================
+% 5. COLOR SYSTEM
+% =========================================================
+
+% resolve indexed color
+\newcommand{\ba@getcolor}[1]{%
+  \ifcsname ba@c#1\endcsname
+    \csname ba@c#1\endcsname%
+  \else
+    white%
+  \fi
+}
+
+\newcommand{\baGetColor}[1]{\ba@getcolor{#1}}
+
+% expand color list into indexed macros
+\newcommand{\baPrepareColors}{%
+  \let\colors\ba@colors%
+  \foreach [count=\i] \c in \colors {%
+    \expandafter\xdef\csname ba@c\i\endcsname{\c}%
+  }%
+}
+
+
+% =========================================================
+% 6. PIC SYSTEM
+% =========================================================
+% User-defined reusable TikZ pics
+% =========================================================
+
+\newcommand{\baNewPic}[2]{%
+  \tikzset{
+    #1/.pic={%
+      \baPrepareColors%
+      #2%
+    }
+  }%
+}
+
+
+% =========================================================
+% 7. RENDERING LAYER
+% =========================================================
+
+\newcommand{\baRenderRegion}[2]{%
+\scalebox{\ba@region@scale}{%
+\begin{tikzpicture}
+  \pic[ba/region/#2]{#1};
+\end{tikzpicture}}%
+}
+
+
+% =========================================================
+% 8. LAYOUT ENGINE (RADIAL POSITIONING)
+% =========================================================
+
+\newcommand{\baPlaceRadialNode}[3]{%
+  \pgfmathsetmacro{\ba@angle}{90-(#1-1)*360/#2}%
+  \node at (\ba@angle:\ba@region@radius) {#3};
+}
+
+
+% =========================================================
+% 9. RADIAL ATLAS RENDERER
+% =========================================================
+% Inputs:
+%   #1 = caption offset (0 or 1 typically)
+%   #2 = region list
+%   #3 = pic template
+% =========================================================
+
+\NewDocumentCommand{\baRadialAtlas}{O{0} m m}{%
+\baRequireAtlas
+
+  % initialize caption index (may be shifted by header caption)
+  \setcounter{baAtlasCaption}{#1}
+
+  % compute number of regions
+  \foreach \r [count=\i] in {#2}{%
+    \xdef\baLastIndex{\i}%
+  }%
+
+  % render regions
+  \foreach \r [count=\i] in {#2}{%
+
+    \stepcounter{baAtlasRegion}
+    \stepcounter{baAtlasCaption}
+
+    \edef\baTmpCaption{\baGetRegionCaption{\r}}
+
+    \baPlaceRadialNode{\i}{\baLastIndex}{%
+      \begin{tabular}{c}
+        \baRenderRegion{#3}{\r}\\[2mm]
+
+        % optional region caption
+        \if\relax\detokenize{\baTmpCaption}\relax
+        \else
+          {\ba@caption@style \baFormatCaptionLabel~\baTmpCaption}\\\\
+        \fi
+        \label{ba:\arabic{baAtlasID}_\r}
+      \end{tabular}
+    }%
+  }%
+}
+
+
+% =========================================================
+% 10. ATLAS FIGURE (HIGH-LEVEL USER COMMAND)
+% =========================================================
+% Combines:
+%   - background diagram
+%   - optional caption
+%   - radial overlay
+% =========================================================
+
+\NewDocumentCommand{\baAtlasFigure}{O{} m m m}{%
+\baRequireAtlas
+
+\begin{tikzpicture}
+
+  % -----------------------------------------------------
+  % background bifurcation diagram
+  % -----------------------------------------------------
+  \node (bg) at (0,0)
+    {\includegraphics[scale=\ba@figure@scale]{#2}};
+
+  % -----------------------------------------------------
+  % optional caption below background figure
+  % -----------------------------------------------------
+  \if\relax\detokenize{#1}\relax
+    \def\ba@offset{0}
+  \else
+    \def\ba@offset{1}
+	\stepcounter{baAtlasCaption}
+    \node[anchor=north]
+      at ([yshift=-\ba@caption@shift]bg.south)
+      {\ba@caption@style \baFormatCaptionLabel~#1};
+  \fi
+
+  % -----------------------------------------------------
+  % radial overlay
+  % -----------------------------------------------------
+  \baRadialAtlas[\ba@offset]{#3}{#4}
+
+\end{tikzpicture}
+}

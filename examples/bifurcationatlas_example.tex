@@ -27,6 +27,7 @@
 \definecolor{HLEqui}{RGB}{230, 159, 0} % orange
 \definecolor{MEqui}{RGB}{0, 158, 115}  % teal
 \definecolor{LLEqui}{RGB}{204, 121, 167} % purple
+\definecolor{TEqui}{RGB}{213, 94, 0} % vermilion red-orange
 
 % =========================================================
 % PIC TEMPLATE DEFINITION
@@ -74,46 +75,54 @@
     % -----------------------------------------------------
     \draw[line width=2pt,red] (0,0.04) -- (0,2);
 }
+\baNewPic{Cartel}{
+{
 
-% =========================================================
-% REGION DEFINITIONS (DATA LAYER)
-% =========================================================
-% Each region maps to a list of 4 colors.
-%
-% Interpretation example:
-%   R1 = [LLEqui, HLEqui, HHEqui, HHEqui]
-%
-% These values are expanded internally into:
-%   \baGetColor{1}, \baGetColor{2}, ...
-% =========================================================
-\baDeclareRegion[Region 1]{R1}{LLEqui,HLEqui,HHEqui,HHEqui}
-\baDeclareRegion[Region 2]{R2}{LLEqui,HLEqui,HHEqui,MEqui}
-\baDeclareRegion[Region 3]{R3}{LLEqui,HLEqui,MEqui,MEqui}
-\baDeclareRegion[Region 4]{R4}{LLEqui,HLEqui,HLEqui,HLEqui}
-\baDeclareRegion[Region 5]{R5}{LLEqui,LLEqui,LLEqui,HLEqui}
-\baDeclareRegion[Region 6]{R6}{LLEqui,HLEqui,HHEqui,HLEqui}
-\baDeclareRegion[Region 7]{R7}{LLEqui,HHEqui,HHEqui,HHEqui}
 
-% =========================================================
-% ATLAS CONFIGURATION
-% =========================================================
-% Global configuration of rendering parameters:
-%
-% region scale   -> size of each region rendering
-% region radius  -> radial distance from center
-% caption style  -> font style for region captions
-% figure scale   -> scaling of background image
-% =========================================================
+    % ====================================================
+    % 4 LARGE SQUARES (base layer)
+    % each is 1x1
+    % ====================================================
+
+    % bottom-left
+    \fill[\baGetColor{1}] (0,0) rectangle (1,1);
+
+    % bottom-right
+    \fill[\baGetColor{2}] (1,0) rectangle (2,1);
+
+    % top-left
+    \fill[\baGetColor{3}] (0,1) rectangle (1,2);
+
+    % top-right
+    \fill[\baGetColor{4}] (1,1) rectangle (2,2);
+
+    % ====================================================
+    % SMALL SQUARE (overwrites bottom-left)
+    % drawn LAST = highest priority
+    % ====================================================
+    \fill[\baGetColor{5}] (0,0) rectangle (0.5,0.5);
+    
+    \draw[line width=2pt,black](0,2) -- (0,0) -- (2,0);
+    \draw (0,1)--(2,1);
+    \draw (1,0)--(1,2);
+    \draw (0,0.5)--(0.5,0.5);
+    \draw (0.5,0)--(0.5,0.5);
+    \draw[line width=2pt,red] (0,0.04)--(0,2);
+    
+}
+}
+
 \baSetup{
   region scale = 1.25,
   region radius = 6.75,
   caption style = \footnotesize,
-  figure scale = 0.35
+  figure scale = 0.35,
+  caption label = arabic
 }
 
 \begin{document}
 
-\begin{figure}
+\begin{bifurcationatlas}
 \centering
 % =========================================================
 % ATLAS RENDERING
@@ -128,11 +137,19 @@
 %   2: list of regions
 %   3: pic template name
 % =========================================================
+\baDeclareRegion[Region 1]{R1}{LLEqui,HLEqui,HHEqui,HHEqui}
+\baDeclareRegion[Region 2]{R2}{LLEqui,HLEqui,HHEqui,MEqui}
+\baDeclareRegion[Region 3]{R3}{LLEqui,HLEqui,MEqui,MEqui}
+\baDeclareRegion[Region 4]{R4}{LLEqui,HLEqui,HLEqui,HLEqui}
+\baDeclareRegion[Region 5]{R5}{LLEqui,LLEqui,LLEqui,HLEqui}
+\baDeclareRegion[Region 6]{R6}{LLEqui,HLEqui,HHEqui,HLEqui}
+\baDeclareRegion[Region 7]{R7}{LLEqui,HHEqui,HHEqui,HHEqui}
+
 \baAtlasFigure[Bifurcation Diagram]{bifurcation}{R1,R2,R3,R4,R5,R6,R7}{Test}
 
 \caption{Structured bifurcation atlas}
 
-\end{figure}
+\end{bifurcationatlas}
 
 % =========================================================
 % CROSS-REFERENCE EXAMPLE
@@ -140,6 +157,36 @@
 % Each region can be referenced via:
 %   \label{ba:R1}, \label{ba:R2}, ...
 % =========================================================
-As shown in Region~\ref{ba:R1}, the system is stable.
+As shown in Region~\ref{ba:1:1}, the system is stable.
+
+\begin{bifurcationatlas}
+\centering
+% =========================================================
+% ATLAS RENDERING
+% =========================================================
+% \baAtlasFigure combines:
+%   (1) background bifurcation diagram (PDF)
+%   (2) radial layout of region renderings
+%   (3) region-specific pic template ("Test")
+%
+% Arguments:
+%   1: background image
+%   2: list of regions
+%   3: pic template name
+% =========================================================
+\baDeclareRegion[Cartel Region 1]{R1}{LLEqui,HLEqui,HHEqui,HHEqui,TEqui}
+\baDeclareRegion[Cartel Region 2]{R2}{LLEqui,HLEqui,HHEqui,MEqui,TEqui}
+\baDeclareRegion[Cartel Region 3]{R3}{LLEqui,HLEqui,MEqui,MEqui,MEqui}
+\baDeclareRegion[Cartel Region 4]{R4}{LLEqui,HLEqui,HLEqui,HLEqui,HLEqui}
+\baDeclareRegion[Cartel Region 5]{R5}{LLEqui,LLEqui,LLEqui,TEqui,TEqui}
+\baDeclareRegion[Cartel Region 6]{R6}{LLEqui,HLEqui,TEqui,TEqui,HLEqui}
+
+\baAtlasFigure[Cartel Bifurcation Diagram]{bifurcation}{R1,R2,R3,R4,R5,R6}{Cartel}
+
+\caption{Structured cartel bifurcation atlas}
+
+\end{bifurcationatlas}
+As shown in Region~\ref{ba:2:3}, the system is stable.
+
 
 \end{document}
