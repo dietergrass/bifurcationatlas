@@ -1,0 +1,1327 @@
+\section{Implementation}
+\subsection{Implementation Variables and Internal Macros}
+
+The package uses a combination of \lstinline|\newcommand| and \lstinline|\def| to implement internal variables and functions. Although both constructs define macros, they serve slightly different purposes and are therefore used for different tasks within the package.
+
+\subsubsection{Internal Variables}
+
+Several package parameters are implemented as macros storing simple values:
+
+\begin{lstlisting}[language={LaTeX}]
+\newcommand{\ba@region@scale}{1.25}
+\newcommand{\ba@region@radius}{6}
+\newcommand{\ba@caption@style}{\scriptsize}
+\newcommand{\ba@figure@scale}{0.25}
+\newcommand{\ba@caption@shift}{-3mm}
+\end{lstlisting}
+
+These macros behave similarly to variables in conventional programming languages. For example,
+
+\begin{lstlisting}[language={LaTeX}]
+\ba@region@scale
+\end{lstlisting}
+
+expands to
+
+\begin{lstlisting}[language=LaTeX]
+1.25
+\end{lstlisting}
+
+whenever it is used.
+
+The values may later be modified through the PGF key interface, for example
+
+\begin{lstlisting}[language={LaTeX}]
+\baSetup{region scale=1.5}
+\end{lstlisting}
+
+which internally redefines the corresponding macro.
+
+\subsubsection{Using \texttt{\textbackslash newcommand}}
+
+The command
+
+\begin{lstlisting}[language={LaTeX}]
+\newcommand{\ba@region@scale}{1.25}
+\end{lstlisting}
+
+creates a new macro and generates an error if the macro already exists.
+
+This behaviour provides a safety mechanism during package development, since accidental redefinitions are detected immediately.
+
+Consequently, \lstinline|\newcommand| is generally preferred for defining package variables, user commands, and stable interfaces.
+
+\subsubsection{Using \texttt{\textbackslash def}}
+
+The package also contains the definition
+
+\begin{lstlisting}[language={LaTeX}]
+\def\ba@fmtcaption{\alph{baSubRegion}}
+\end{lstlisting}
+
+which specifies the formatting function used for caption labels.
+
+Unlike \lstinline|\newcommand|, the primitive
+
+\begin{lstlisting}[language={LaTeX}]
+\def
+\end{lstlisting}
+
+does not check whether a macro already exists and simply replaces its definition.
+
+This makes \lstinline|\def| useful when a macro is intended to be repeatedly overwritten by internal package logic. In the present package, the caption format may change dynamically according to the selected key
+
+\begin{lstlisting}[language={LaTeX}]
+caption label=alpha
+caption label=roman
+caption label=Roman
+caption label=arabic
+\end{lstlisting}
+
+which internally execute statements such as
+
+\begin{lstlisting}[language={LaTeX}]
+\def\ba@fmtcaption{\roman{baSubRegion}}
+\end{lstlisting}
+
+or
+
+\begin{lstlisting}[language={LaTeX}]
+\def\ba@fmtcaption{\arabic{baSubRegion}}
+\end{lstlisting}
+
+to replace the current formatting rule.
+
+For this reason, \lstinline|\def| is often used for internal implementation details whose meaning changes dynamically.
+
+\subsubsection{Variable versus Function Macros}
+
+A useful distinction is to regard
+
+\begin{lstlisting}[language={LaTeX}]
+\newcommand{\ba@region@scale}{1.25}
+\end{lstlisting}
+
+as a variable storing a value, whereas
+
+\begin{lstlisting}[language={LaTeX}]
+\def\ba@fmtcaption{\alph{baSubRegion}}
+\end{lstlisting}
+
+acts more like a function that computes a representation from the current counter value.
+
+The user-level command
+
+\begin{lstlisting}[language={LaTeX}]
+\newcommand{\baFormatCaptionLabel}{\ba@fmtcaption}
+\end{lstlisting}
+
+provides an abstraction layer. All package code accesses caption labels through
+
+\begin{lstlisting}[language={LaTeX}]
+\baFormatCaptionLabel
+\end{lstlisting}
+
+without needing to know which numbering scheme is currently active.
+
+\subsubsection{The Meaning of the \texttt{@} Character}
+
+Many internal macros contain the character \lstinline|@|:
+
+\begin{lstlisting}[language={LaTeX}]
+\ba@region@scale
+\ba@region@radius
+\ba@fmtcaption
+\ba@atlaslabel
+\end{lstlisting}
+
+In LaTeX, \lstinline|@| is traditionally used to distinguish internal implementation macros from user-level commands.
+
+When a package is loaded, \lstinline|@| is temporarily treated as a letter, allowing definitions such as
+
+\begin{lstlisting}[language={LaTeX}]
+\newcommand{\ba@region@scale}{1.25}
+\end{lstlisting}
+
+to be created.
+
+Outside package code, however, \lstinline|@| is not considered a letter and therefore these commands are normally inaccessible to users.
+
+This convention serves two purposes:
+
+\begin{enumerate}
+\item It separates the public interface from the internal implementation.
+\item It reduces the risk of name collisions with user-defined commands.
+\end{enumerate}
+
+For example,
+
+\begin{lstlisting}[language={LaTeX}]
+\baSetup
+\baDeclareRegion
+\baAtlasFigure
+\end{lstlisting}
+
+form part of the public API, whereas
+
+\begin{lstlisting}[language={LaTeX}]
+\ba@region@scale
+\ba@fmtcaption
+\ba@atlaslabel
+\end{lstlisting}
+
+are intended solely for internal package use.
+
+The naming convention therefore clearly distinguishes package internals from user-accessible commands and improves maintainability of the implementation.
+
+\subsection{Macros and Variables in \LaTeX}
+
+In \LaTeX{}, the concepts of \emph{variables} and \emph{macros} do not exist as separate language constructs in the same way as in programming languages such as Python or C. Instead, both concepts are implemented using \emph{macros}. Understanding this distinction is essential for designing robust package code.
+
+\subsubsection{Macros as the Fundamental Mechanism}
+
+A macro in \LaTeX{} is a named command that expands into replacement text. For example:
+
+\begin{lstlisting}[language=LaTeX]
+\newcommand{\example}{Hello World}
+\end{lstlisting}
+Whenever \lstinline|\example| is used, it is replaced by its definition:
+
+\begin{lstlisting}[language=LaTeX]
+Hello World
+\end{lstlisting}
+Macros can therefore represent:
+
+\begin{itemize}
+\item text fragments,
+\item formatting instructions,
+\item mathematical expressions,
+\item or even code-like behavior.
+\end{itemize}
+In this sense, macros are the \emph{fundamental abstraction mechanism} of \TeX{}.
+
+\subsubsection{Variables as a Conceptual Interpretation}
+
+Although \LaTeX{} does not provide true variables, macros are often used to simulate them. For example:
+\begin{lstlisting}[language=LaTeX]
+\newcommand{\ba@region@scale}{1.25}
+\end{lstlisting}
+can be interpreted as a \emph{variable} storing a numeric value.
+
+However, technically it remains a macro that expands to the token sequence \lstinline|1.25|. There is no memory cell, no type system, and no assignment in the traditional sense.
+
+Thus, a ``variable'' in \LaTeX{} is simply a macro whose expansion is treated as data.
+
+\subsubsection{Difference Between Macros and Variables (Conceptual View)}
+
+The distinction is therefore conceptual rather than technical:
+
+\begin{center}
+\begin{tabular}{ll}
+\textbf{Macro} & \textbf{Variable (conceptual)} \\
+\hline
+General-purpose expansion rule & Stores a value-like token sequence \\
+May contain logic or formatting & Intended to behave like data \\
+Can act as function or constant & Typically used as a constant \\
+\end{tabular}
+\end{center}
+For example:
+
+\begin{lstlisting}[language=LaTeX]
+\def\ba@fmtcaption{\alph{baSubRegion}}
+\end{lstlisting}
+behaves like a \emph{function macro}, since it computes an output based on a counter.
+
+In contrast:
+
+\begin{lstlisting}[language=LaTeX]
+\newcommand{\ba@region@radius}{6}
+\end{lstlisting}
+behaves like a \emph{variable macro}, since it stores a fixed value.
+
+\subsubsection{Assignment and Mutability}
+
+Unlike variables in imperative programming languages, macros do not support assignment. Instead, they are redefined:
+
+\begin{lstlisting}[language=LaTeX]
+\renewcommand{\ba@region@radius}{7}
+\end{lstlisting}
+or
+
+\begin{lstlisting}[language=LaTeX]
+\def\ba@fmtcaption{\roman{baSubRegion}}
+\end{lstlisting}
+
+This means that what appears to be ``updating a variable'' is actually replacing one macro definition with another.
+
+\subsubsection{Summary}
+
+In summary, \LaTeX{} does not distinguish between macros and variables at the language level. Instead:
+
+\begin{itemize}
+\item \textbf{Macros} are the underlying mechanism for all definitions.
+\item \textbf{Variables} are a conceptual interpretation of macros used as data containers.
+\item \textbf{Functions} are macros whose expansion depends on arguments or counters.
+\end{itemize}
+
+This abstraction allows flexible package design but requires careful naming and structure to avoid unintended redefinitions or expansion issues.
+
+\subsection{Floating Environment and Atlas State Management}
+
+The \texttt{bifurcationatlas} package builds on the \texttt{newfloat} mechanism to provide a structured floating environment for bifurcation diagrams, while maintaining an internal state system for consistent numbering, labeling, and region management.
+
+\subsubsection{Floating Environment Declaration}
+
+The core floating container is defined using
+
+\begin{lstlisting}[language=LaTeX]
+\DeclareFloatingEnvironment[
+  fileext=loa,
+  listname={List of Bifurcation Atlases},
+  name=Bifurcation Atlas,
+  placement=htbp
+]{bifurcationatlasfloat}
+\end{lstlisting}
+
+This creates a new float type similar to \texttt{figure} or \texttt{table}. The configuration has the following effects:
+
+\begin{itemize}
+\item \texttt{fileext=loa}: writes entries to a dedicated list file (analogous to \texttt{lof} or \texttt{lot}).
+\item \texttt{listname}: defines the title of the generated list of atlases.
+\item \texttt{name}: sets the printed caption prefix.
+\item \texttt{placement=htbp}: controls float placement rules.
+\end{itemize}
+
+This float acts as the visual and structural container for each bifurcation atlas instance.
+
+\subsubsection{Global Atlas State}
+
+The package maintains a minimal global state to ensure consistency across nested macros:
+
+\begin{lstlisting}[language=LaTeX]
+\newif\ifba@inatlas
+\def\ba@atlaslabel{}
+\let\ba@oldlabel\label
+\end{lstlisting}
+\paragraph{The Syntax and Meaning of \texttt{\textbackslash newif}}
+
+The primitive \lstinline|\newif| is a low-level \TeX{} construct used to define conditional flags (booleans). Its syntax
+
+\begin{lstlisting}[language=LaTeX]
+\newif\ifba@inatlas
+\end{lstlisting}
+
+creates a new conditional named \lstinline|\ifba@inatlas| together with two associated commands:
+
+\begin{itemize}
+\item \lstinline|\ba@inatlastrue| sets the conditional to \emph{true},
+\item \lstinline|\ba@inatlasfalse| sets the conditional to \emph{false}.
+\end{itemize}
+
+After declaration, the conditional can be used in standard \TeX{} branching structures:
+
+\begin{lstlisting}[language=LaTeX]
+\ifba@inatlas
+  % code executed if true
+\else
+  % code executed if false
+\fi
+\end{lstlisting}
+
+Unlike higher-level constructs such as \lstinline|\newcommand| or \LaTeX3 booleans, \lstinline|\newif| operates at the primitive \TeX{} level and provides a lightweight mechanism for global state management.
+
+A key property is that the conditional itself (\lstinline|\ifba@inatlas|) is not a variable in the usual sense, but a control-flow switch that expands directly into branching logic during compilation.
+
+In package design, such conditionals are typically used to track execution context, for example whether code is currently inside a specific environment, ensuring that certain commands are only valid in the correct scope.
+\begin{itemize}
+\item \lstinline|\ifba@inatlas| is a boolean flag indicating whether the current code is executed inside an atlas environment.
+\item \lstinline|\ba@atlaslabel| stores the user-defined label of the current atlas (if provided via \lstinline|\label|).
+\item \lstinline|\ba@oldlabel| preserves the original LaTeX labeling mechanism before it is temporarily overridden.
+\end{itemize}
+Additionally, the macro
+
+\begin{lstlisting}[language=LaTeX]
+\newcommand{\baRequireAtlas}{...}
+\end{lstlisting}
+
+acts as a safety guard. It produces a package error if atlas-specific commands are used outside the environment, preventing inconsistent state usage.
+
+\subsubsection{Atlas Environment Initialization}
+
+The environment is defined using
+
+\begin{lstlisting}[language=LaTeX]
+\NewDocumentEnvironment{bifurcationatlas}{O{}}{ ... }{ ... }
+\end{lstlisting}
+
+where the optional argument allows configuration via a key--value interface.
+
+At the beginning of the environment, a local group is opened:
+
+\begin{lstlisting}[language=LaTeX]
+\begingroup
+\end{lstlisting}
+
+This ensures that all internal changes remain local and do not leak into the global document state.
+
+\paragraph{User Configuration}
+
+User-provided options are processed via:
+
+\begin{lstlisting}[language=LaTeX]
+\pgfkeys{/ba,#1}
+\end{lstlisting}
+\paragraph{Syntax and Meaning of \texttt{\textbackslash pgfkeys\{/ba,\#1\}}}
+
+The command \lstinline|\pgfkeys{/ba,#1}| is part of the \texttt{pgfkeys} key--value processing system and is used to apply a set of user-provided configuration options to a predefined key family.
+
+The syntax consists of two components:
+
+\begin{itemize}
+\item \texttt{/ba} is the key family (or key path prefix), defining the namespace in which all relevant keys are registered (e.g., \texttt{/ba/region scale}, \texttt{/ba/caption label}).
+\item \lstinline|#1| is the argument passed to the environment or macro, containing a comma-separated list of user options such as \texttt{region scale=1.5, caption label=roman}.
+\end{itemize}
+
+When executed, \lstinline|\pgfkeys| parses the input string and dispatches each key--value pair to its corresponding handler defined in the key family. For example, an input
+
+\begin{lstlisting}[language=LaTeX]
+\begin{bifurcationatlas}[region scale=1.5, caption label=roman]
+\end{lstlisting}
+
+is internally expanded into:
+
+\begin{lstlisting}[language=LaTeX]
+\pgfkeys{/ba, region scale=1.5, caption label=roman}
+\end{lstlisting}
+
+Each key is then evaluated according to its definition in the \texttt{/ba} key family, typically using handlers such as \lstinline|.code|, \lstinline|.store in|, or \lstinline|.is choice|.
+
+Thus, \lstinline|\pgfkeys{/ba,#1}| acts as the central interface between user-level configuration and internal package parameters, enabling structured and extensible option handling without requiring manual parsing of optional arguments.
+
+This connects the environment directly to the package key system, allowing local overrides of visual and structural parameters.
+
+\paragraph{Activation and Counter Reset}
+
+The atlas state is activated and counters are initialized:
+
+\begin{lstlisting}[language=LaTeX]
+\ba@inatlastrue
+\stepcounter{baAtlasID}
+\setcounter{baRegion}{0}
+\setcounter{baSubRegion}{0}
+\end{lstlisting}
+
+This ensures that each atlas instance receives a unique identifier, while its internal region numbering starts from zero.
+
+\paragraph{Local Storage Reset}
+
+Internal accumulators used during rendering are cleared:
+
+\begin{lstlisting}[language=LaTeX]
+\def\ba@regionlist{}
+\def\ba@colors{}
+\def\ba@caption{}
+\end{lstlisting}
+
+These macros act as temporary storage containers for region metadata and are reset for each atlas.
+
+\subsubsection{Safe Label Capture Mechanism}
+
+A central feature of the implementation is the controlled interception of \lstinline|\label|:
+
+\begin{lstlisting}[language=LaTeX]
+\let\ba@oldlabel\label
+\def\ba@atlaslabel{}
+\renewcommand{\label}[1]{%
+  \ifx\ba@atlaslabel\@empty
+    \gdef\ba@atlaslabel{##1}%
+  \fi
+  \ba@oldlabel{##1}%
+}
+\end{lstlisting}
+\paragraph{Why \texttt{\#\#1} is required instead of \texttt{\#1}}
+
+Inside the redefinition of a macro, TeX distinguishes between parameter placeholders of the \emph{outer macro being defined} and literal parameter tokens that should be stored inside the newly defined macro. In the construct
+
+\begin{lstlisting}[language=LaTeX]
+\renewcommand{\label}[1]{%
+  \gdef\ba@atlaslabel{##1}%
+}
+\end{lstlisting}
+
+the command \lstinline|\label| itself has one argument, denoted by \lstinline|#1|. However, the body of the definition is processed at a higher syntactic level: it is not yet executed but instead being written as the replacement text of \lstinline|\label|. For this reason, any parameter marker that should survive into the final definition must be escaped by doubling the hash symbol.
+
+Thus, \lstinline|##1| does not refer to a second argument, but rather encodes a literal \lstinline|#1| that will only be interpreted when \lstinline|\label| is later executed. If one were to write \lstinline|#1| instead, TeX would attempt to interpret it as a parameter of the surrounding definition process, leading to an ``Illegal parameter number'' error.
+
+In summary, \lstinline|##1| is required to preserve the intended argument reference inside a macro definition, ensuring correct expansion at execution time rather than at definition time.
+
+This mechanism serves two purposes:
+
+\begin{itemize}
+\item It captures the first user-provided label as the atlas identifier.
+\item It preserves the original \LaTeX{} labeling functionality via \lstinline|\ba@oldlabel|.
+\end{itemize}
+
+The redefined \lstinline|\label| macro stores the first encountered label in \lstinline|\ba@atlaslabel| and then delegates to the original implementation. This ensures compatibility with \texttt{hyperref} and standard referencing mechanisms.
+
+\subsubsection{Detailed Execution Logic}
+
+When \lstinline|\label{key}| is executed inside the environment, the macro expansion proceeds as follows:
+
+\begin{enumerate}
+\item The argument \lstinline|key| is passed to the redefined \lstinline|\label|.
+\item A check is performed:
+\begin{lstlisting}[language=LaTeX]
+\ifx\ba@atlaslabel\@empty
+\end{lstlisting}
+This verifies whether an atlas identifier has already been stored.
+\item If no identifier exists, the first encountered label is globally stored:
+\begin{lstlisting}[language=LaTeX]
+\gdef\ba@atlaslabel{key}
+\end{lstlisting}
+The use of \lstinline|\gdef| ensures persistence across local grouping boundaries and nested environments.
+\item The original labeling mechanism is executed:
+\begin{lstlisting}[language=LaTeX]
+\ba@oldlabel{key}
+\end{lstlisting}
+This guarantees full compatibility with \LaTeX{} cross-referencing and hyperlinking systems.
+\end{enumerate}
+\subsubsection{Why Redefining \texttt{\textbackslash label} is Necessary}
+
+The redefinition of \lstinline|\label| is not required to preserve its original functionality, but rather to extend it with additional structural information needed by the bifurcation atlas system. In standard \LaTeX{}, the command \lstinline|\label| only writes an entry to the auxiliary file and enables later referencing via \lstinline|\ref| or \lstinline|\pageref|. However, it does not expose the label key (e.g.\ \texttt{ba:test1}) in a way that can be programmatically reused during compilation.
+
+By redefining \lstinline|\label|, the system introduces a controlled interception mechanism:
+
+\begin{itemize}
+\item It detects when a label is issued inside the atlas environment.
+\item It captures the first encountered label as the atlas identifier via \lstinline|\ba@atlaslabel|.
+\item It preserves all standard \LaTeX{} functionality by delegating execution to the original implementation stored in \lstinline|\ba@oldlabel|.
+\end{itemize}
+
+The key idea is that the original behavior is not replaced but wrapped. The line
+
+\begin{lstlisting}[language=LaTeX]
+\ba@oldlabel{##1}
+\end{lstlisting}
+
+ensures full compatibility with \texttt{hyperref}, auxiliary file writing, and cross-referencing mechanisms.
+
+This design is necessary because \LaTeX{} does not provide a native mechanism to query or structure labels after they are defined. The atlas system therefore uses \lstinline|\label| as a data source, extracting semantic information (the atlas identifier) while maintaining full backward compatibility with the standard referencing system.
+\subsubsection{Design Interpretation}
+
+This construction effectively turns \lstinline|\label| into a \emph{dual-purpose hook}:
+
+\begin{itemize}
+\item a metadata extractor (capturing the atlas identifier),
+\item a transparent pass-through to the original referencing system.
+\end{itemize}
+
+Importantly, only the first invocation of \lstinline|\label| has semantic significance for the atlas structure. Subsequent labels behave exactly as in standard \LaTeX{}, ensuring no interference with user-defined cross-references.
+
+\subsubsection{Robustness Considerations}
+
+The mechanism relies on the invariant that \lstinline|\ba@atlaslabel| is initially empty. This avoids ambiguity between an undefined macro and an intentionally empty state. Furthermore, the use of \lstinline|\let| to store \lstinline|\ba@oldlabel| is essential to prevent infinite recursion, since \lstinline|\renewcommand{\label}| would otherwise overwrite the original definition.
+\subsubsection{Floating Container Opening}
+
+The actual visual content is placed inside the float:
+
+\begin{lstlisting}[language=LaTeX]
+\begin{bifurcationatlasfloat}
+\end{lstlisting}
+
+At this stage, all atlas content (background figures, radial layouts, and region nodes) is inserted.
+
+\subsubsection{Environment Closure and Cleanup}
+
+At the end of the environment, the float is closed:
+
+\begin{lstlisting}[language=LaTeX]
+\end{bifurcationatlasfloat}
+\end{lstlisting}
+
+Afterwards, the system performs cleanup:
+
+\begin{lstlisting}[language=LaTeX]
+\ba@inatlasfalse
+\let\label\ba@oldlabel
+\endgroup
+\end{lstlisting}
+
+This restores:
+
+\begin{itemize}
+\item the atlas state flag,
+\item the original \LaTeX\ label definition,
+\item and the previous grouping context.
+\end{itemize}
+
+\subsubsection{Summary of Design Principles}
+
+This implementation follows three key design principles:
+
+\begin{itemize}
+\item \textbf{Isolation}: Each atlas is fully self-contained via grouping.
+\item \textbf{Compatibility}: Standard LaTeX labeling and hyperref mechanisms are preserved.
+\item \textbf{Safety}: Misuse outside the environment is explicitly detected.
+\end{itemize}
+
+The result is a floating environment that behaves like a standard LaTeX float while supporting structured internal indexing and safe label management.
+
+\subsection{Differences Between \texttt{\textbackslash def}, \texttt{\textbackslash let}, \texttt{\textbackslash gdef}, and \texttt{\textbackslash edef}}
+
+In \TeX{} programming, macro assignment is controlled by a small set of primitive operations that differ significantly in scope, expansion behavior, and evaluation timing. The most important distinctions arise between \lstinline|\def|, \lstinline|\let|, \lstinline|\gdef|, and \lstinline|\edef|.
+
+\subsubsection{Local Definition: \texttt{\textbackslash def}}
+
+The primitive
+
+\begin{lstlisting}[language=LaTeX]
+\def\macro{replacement text}
+\end{lstlisting}
+
+defines a macro by assigning a replacement text that is expanded when the macro is used. If the macro already exists, it is overwritten.
+
+A key property is that \lstinline|\def| respects grouping: changes made inside \lstinline|\begingroup...\endgroup| remain local and are discarded afterwards.
+
+Thus, \lstinline|\def| is typically used for configurable or temporary definitions within a local scope.
+
+\subsubsection{Direct Assignment: \texttt{\textbackslash let}}
+
+The primitive
+
+\begin{lstlisting}[language=LaTeX]
+\let\macroA=\macroB
+\end{lstlisting}
+
+assigns \lstinline|\macroA| to be an exact copy of the current meaning of \lstinline|\macroB|. Unlike \lstinline|\def|, it does not create a new replacement text but instead binds the control sequence directly.
+
+Important properties:
+
+\begin{itemize}
+\item It is instantaneous (no expansion of content).
+\item It creates a fixed alias (snapshot semantics).
+\item It is commonly used to preserve original definitions (e.g., saving \lstinline|\label| before redefining it).
+\end{itemize}
+
+\subsubsection{Global Definition: \texttt{\textbackslash gdef}}
+
+The primitive
+
+\begin{lstlisting}[language=LaTeX]
+\gdef\macro{replacement text}
+\end{lstlisting}
+
+is equivalent to \lstinline|\def| but ignores grouping boundaries. This means:
+
+\begin{itemize}
+\item The definition is global and persists beyond any \lstinline|\begingroup|.
+\item It overrides any local scope restrictions.
+\item It is typically used when state must survive environment boundaries.
+\end{itemize}
+
+Because of its non-local behavior, \lstinline|\gdef| must be used carefully in package design, especially when environments rely on grouping for cleanup.
+
+\subsubsection{Expansion Definition: \texttt{\textbackslash edef}}
+
+The primitive
+
+\begin{lstlisting}[language=LaTeX]
+\edef\macro{replacement text}
+\end{lstlisting}
+
+performs a fully expanded definition: the right-hand side is expanded immediately at definition time, and the resulting fully expanded text is stored as the macro body.
+
+Key properties:
+
+\begin{itemize}
+\item All expandable tokens are expanded immediately.
+\item The final macro contains only unexpandable primitives.
+\item It is useful for constructing fixed strings, labels, or keys.
+\end{itemize}
+
+However, care must be taken because unintended expansion of fragile commands can lead to errors.
+
+\subsubsection{Fully Expanding Assignment with \texttt{\textbackslash xdef}}
+
+The command
+
+\begin{lstlisting}[language=LaTeX]
+\xdef\ba@c\i{\c}
+\end{lstlisting}
+
+appears inside constructions such as:
+
+\begin{lstlisting}[language=LaTeX]
+\foreach [count=\i] \c in \colors {%
+  \expandafter\xdef\csname ba@c\i\endcsname{\c}%
+}
+\end{lstlisting}
+
+and is a key mechanism for creating indexed macros.
+
+
+
+\paragraph{Meaning of \texttt{\textbackslash xdef}}
+
+The command \verb|\xdef| is short for:
+
+\begin{center}
+\textbf{e\textbf{x}pandable \textbf{def}inition}
+\end{center}
+
+It behaves like:
+
+\begin{itemize}
+\item \verb|\def| (defines a macro),
+\item but with \textbf{full expansion of the right-hand side},
+\item and the definition is made \textbf{global}.
+\end{itemize}
+
+
+
+\paragraph{Difference to \texttt{\textbackslash def}}
+
+\begin{itemize}
+\item \verb|\def| stores the argument \emph{as-is} (no full expansion).
+\item \verb|\xdef| fully expands all expandable content before storing it.
+\end{itemize}
+
+For example:
+
+\begin{lstlisting}[language=LaTeX]
+\def\a{\textbf{red}}
+\xdef\b{\a}
+\end{lstlisting}
+
+results in:
+
+\begin{itemize}
+\item \verb|\a| expands later to \textbf{red}
+\item \verb|\b| already contains \textbf{red} at definition time
+\end{itemize}
+
+
+
+\paragraph{Why \texttt{\textbackslash xdef} is used in indexed color storage}
+
+In the expression:
+
+\begin{lstlisting}[language=LaTeX]
+\xdef\csname ba@c\i\endcsname{\c}
+\end{lstlisting}
+
+the purpose is to:
+
+\begin{enumerate}
+\item Create a macro name dynamically (e.g., \verb|\ba@c1|, \verb|\ba@c2|, ...),
+\item Store the actual color value inside it,
+\item Ensure the value is fully resolved at assignment time.
+\end{enumerate}
+
+This guarantees that no further expansion is required during rendering.
+
+
+
+\paragraph{Role of \texttt{\textbackslash expandafter}}
+
+Because \verb|\csname...\endcsname| must be constructed before \verb|\xdef| sees it, we use:
+
+\begin{lstlisting}[language=LaTeX]
+\expandafter\xdef\csname ba@c\i\endcsname{\c}
+\end{lstlisting}
+
+This forces TeX to first evaluate:
+
+\begin{lstlisting}[language=LaTeX]
+\csname ba@c\i\endcsname
+\end{lstlisting}
+
+before applying \verb|\xdef|.
+
+
+
+\paragraph{Why global assignment matters}
+
+Since region rendering and color lookup happen later in possibly different grouping levels (e.g., inside TikZ pictures or floats), the assignment must persist globally. \verb|\xdef| ensures:
+
+\begin{itemize}
+\item values are not lost at group boundaries,
+\item indexed macros remain accessible throughout the document,
+\item consistency across multiple atlas environments.
+\end{itemize}
+
+
+
+\paragraph{Summary}
+
+\begin{itemize}
+\item \verb|\def|: local, non-expanding assignment
+\item \verb|\xdef|: global, fully expanding assignment
+\item used here for building a persistent indexed color table
+\end{itemize}
+
+\subsubsection{Comparison of the Four Primitives}
+
+\begin{center}
+\begin{tabular}{l|l|l|l}
+\textbf{Command} & \textbf{Scope} & \textbf{Expansion} & \textbf{Purpose} \\
+\hline
+\lstinline|\def|  & Local (group-aware) & No immediate expansion & Standard macro definition \\
+\lstinline|\let|  & Local/global (copy)  & No expansion           & Alias / preservation \\
+\lstinline|\gdef| & Global               & No immediate expansion & Persistent state \\
+\lstinline|\edef| & Local/global         & Full expansion         & Precomputed fixed content \\
+\lstinline|\xdef| & Global               & Full expansion         & Global precomputed definition \\
+\end{tabular}
+\end{center}
+
+\subsubsection{Implications for Package Design}
+
+In structured packages such as \texttt{bifurcationatlas}, each primitive serves a distinct role:
+
+\begin{itemize}
+\item \lstinline|\def| is used for configurable parameters (e.g., formatting rules).
+\item \lstinline|\let| is used to preserve original commands (e.g., saving \lstinline|\label|).
+\item \lstinline|\gdef| is used when state must persist across environments (e.g., capturing the atlas label globally).
+\item \lstinline|\edef| is used when constructing deterministic keys or auxiliary file entries.
+\end{itemize}
+
+Understanding these differences is essential for avoiding subtle bugs related to scope leakage, premature expansion, or unintended overwriting of core \LaTeX{} mechanisms.
+\subsection{The Meaning and Syntax of \texttt{\textbackslash label}}
+
+In \LaTeX{}, the command \lstinline|\label| is the fundamental mechanism for creating cross-references. It is used to associate a symbolic name with the current value of a counter or a structural position in the document (such as a section, figure, equation, or custom environment).
+
+\subsubsection{Original Meaning of \texttt{\textbackslash label}}
+
+Internally, \lstinline|\label| does not directly store the visible number shown in the document. Instead, it writes an entry into the auxiliary file (\texttt{.aux}), linking a user-defined key to several pieces of internal information, such as:
+
+\begin{itemize}
+\item the current value of the most recently stepped counter,
+\item the page number,
+\item and additional metadata used by packages such as \texttt{hyperref}.
+\end{itemize}
+
+For example, when LaTeX processes:
+
+\begin{lstlisting}[language=LaTeX]
+\section{Introduction}\label{sec:intro}
+\end{lstlisting}
+
+it writes an entry similar to:
+
+\begin{lstlisting}[language=LaTeX]
+\newlabel{sec:intro}{{1}{1}}
+\end{lstlisting}
+
+This means that the label \lstinline|sec:intro| refers to section number 1 on page 1.
+
+\subsubsection{Syntax of \texttt{\textbackslash label}}
+
+The general syntax is:
+
+\begin{lstlisting}[language=LaTeX]
+\label{key}
+\end{lstlisting}
+
+where:
+
+\begin{itemize}
+\item \texttt{key} is a user-defined identifier,
+\item it is later used with \lstinline|\ref{key}| or \lstinline|\pageref{key}|.
+\end{itemize}
+
+The key must be unique within the document to avoid ambiguous references.
+
+\subsubsection{How \texttt{\textbackslash label} Works Internally}
+
+The command \lstinline|\label| stores information by writing to the auxiliary file:
+
+\begin{lstlisting}[language=LaTeX]
+\newlabel{key}{{current-number}{page}}
+\end{lstlisting}
+
+When the document is compiled again, LaTeX reads this file and resolves all references.
+
+With the \texttt{hyperref} package, the structure is extended to include hyperlink targets:
+
+\begin{lstlisting}[language=LaTeX]
+\newlabel{key}{{current-number}{page}{text}{anchor}{}}
+\end{lstlisting}
+
+This allows clickable references in the compiled PDF.
+
+\subsubsection{Relation to Counters}
+
+A crucial property of \lstinline|\label| is that it does not generate numbers itself. Instead, it captures the value of the most recently incremented counter.
+
+For example:
+
+\begin{lstlisting}[language=LaTeX]
+\refstepcounter{section}
+\label{sec:example}
+\end{lstlisting}
+
+ensures that the label is associated with the current section counter value.
+
+This is why environments such as \texttt{figure}, \texttt{equation}, and custom structures must use \lstinline|\refstepcounter| to make labels meaningful.
+
+\subsubsection{Usage in Custom Environments}
+
+In custom packages, \lstinline|\label| is often redefined or intercepted to attach additional structure to references. However, its original role remains:
+
+\begin{quote}
+to bind a symbolic name to the current counter state and page position for later retrieval via \texttt{\textbackslash ref}.
+\end{quote}
+
+To preserve compatibility with standard LaTeX and packages such as \texttt{hyperref}, any redefinition should always delegate to the original \lstinline|\label| using a stored copy (e.g., via \lstinline|\let\oldlabel\label|).
+
+\subsubsection{Summary}
+
+\begin{itemize}
+\item \texttt{\textbackslash label} creates a symbolic reference key.
+\item It stores counter and page information in the auxiliary file.
+\item It does not generate numbers itself but captures existing counter states.
+\item It is resolved on the next compilation run via \texttt{\textbackslash ref}.
+\item It is the foundation of all cross-referencing mechanisms in \LaTeX.
+\end{itemize}
+\subsection{Key--Value Interface with \texttt{pgfkeys}: Syntax, Semantics, and Application}
+
+The \texttt{pgfkeys} system (from the PGF/TikZ ecosystem) provides a structured key--value interface for configuring packages and environments in a scalable and hierarchical way. It replaces ad-hoc optional arguments with a declarative configuration model, where user options are parsed as named keys rather than positional parameters.
+
+\subsubsection{General Syntax of \texttt{pgfkeys}}
+
+The basic syntax is:
+
+\begin{lstlisting}[language=LaTeX]
+\pgfkeys{<key path>/<key>/.code = {<code>}}
+\end{lstlisting}
+
+or equivalently:
+
+\begin{lstlisting}[language=LaTeX]
+\pgfkeys{<family>, <key>=<value>, ...}
+\end{lstlisting}
+
+Each key is associated with an action, such as:
+
+\begin{itemize}
+\item executing code (\texttt{.code}),
+\item storing values (\texttt{.store in}),
+\item defining choices (\texttt{.is choice}),
+\item or nesting into subtrees (hierarchical keys).
+\end{itemize}
+
+
+
+\subsubsection{Key Family Definition}
+
+In the presented implementation, all keys are grouped under the family:
+
+\begin{lstlisting}[language=LaTeX]
+/ba/.is family,
+\end{lstlisting}
+
+This establishes a namespace \texttt{/ba} that prevents collisions with other packages. Any key defined under this family must be prefixed by \texttt{/ba/}.
+
+The line
+
+\begin{lstlisting}[language=LaTeX]
+/ba,
+\end{lstlisting}
+
+sets \texttt{/ba} as the default path, so that keys can be written without repeating the full prefix.
+
+
+
+\subsubsection{Direct Code Keys (\texttt{.code})}
+
+Several keys directly execute \LaTeX{} code when used:
+
+\begin{lstlisting}[language=LaTeX]
+region scale/.code   = {\renewcommand{\ba@region@scale}{#1}},
+region radius/.code  = {\renewcommand{\ba@region@radius}{#1}},
+caption style/.code  = {\renewcommand{\ba@caption@style}{#1}},
+figure scale/.code   = {\renewcommand{\ba@figure@scale}{#1}},
+caption shift/.code  = {\renewcommand{\ba@caption@shift}{#1}},
+\end{lstlisting}
+These keys map user input directly to internal macros. For example:
+
+\begin{lstlisting}[language=LaTeX]
+\baSetup{region radius=7}
+\end{lstlisting}
+will execute:
+\begin{lstlisting}[language=LaTeX]
+\renewcommand{\ba@region@radius}{7}
+\end{lstlisting}
+This approach allows dynamic reconfiguration of rendering parameters without exposing internal macros to the user.
+
+\subsubsection{Value Storage Keys (\texttt{.store in})}
+
+Some keys store values in internal macros:
+\begin{lstlisting}[language=LaTeX]
+internal/region colors/.store in=\ba@colors,
+internal/region caption/.store in=\ba@caption,
+\end{lstlisting}
+This mechanism assigns the user-provided value directly to a macro. For example:
+\begin{lstlisting}[language=LaTeX]
+internal/region colors={red,blue,green}
+\end{lstlisting}
+results in:
+\begin{lstlisting}[language=LaTeX]
+\def\ba@colors{red,blue,green}
+\end{lstlisting}
+This is particularly useful for data-like configuration such as lists or structured input.
+
+\subsubsection{Choice Keys (\texttt{.is choice})}
+
+The caption formatting system is implemented as a choice key:
+
+\begin{lstlisting}[language=LaTeX]
+caption label/.is choice,
+\end{lstlisting}
+with variants:
+\begin{lstlisting}[language=LaTeX]
+/ba/caption label/alpha/.code  = {\def\ba@fmtcaption{\alph{baSubRegion}}},
+/ba/caption label/roman/.code  = {\def\ba@fmtcaption{\roman{baSubRegion}}},
+/ba/caption label/Roman/.code  = {\def\ba@fmtcaption{\Roman{baSubRegion}}},
+/ba/caption label/arabic/.code = {\def\ba@fmtcaption{\arabic{baSubRegion}}},
+\end{lstlisting}
+This defines a controlled enumeration of valid formatting modes. The user can select a mode via:
+\begin{lstlisting}[language=LaTeX]
+\baSetup{caption label=roman}
+\end{lstlisting}
+Internally, this sets the macro \lstinline|\ba@fmtcaption| accordingly, which is later used to format region labels.
+
+\subsubsection{User Interface Command: \texttt{\textbackslash baSetup}}
+
+To provide a clean interface, the package defines:
+
+\begin{lstlisting}[language=LaTeX]
+\newcommand{\baSetup}[1]{\pgfkeys{/ba,#1}}
+\end{lstlisting}
+
+This command forwards all user input into the \texttt{/ba} key family. Thus:
+
+\begin{lstlisting}[language=LaTeX]
+\baSetup{region radius=6, caption label=Roman}
+\end{lstlisting}
+
+is equivalent to manually calling:
+
+\begin{lstlisting}[language=LaTeX]
+\pgfkeys{/ba/region radius=6, /ba/caption label=Roman}
+\end{lstlisting}
+
+
+
+\subsubsection{Role in the Package Architecture}
+
+Within the \texttt{bifurcationatlas} system, \texttt{pgfkeys} serves as the primary configuration layer. It cleanly separates:
+
+\begin{itemize}
+\item \textbf{User interface}: declarative key--value options,
+\item \textbf{Internal state}: macros such as \lstinline|\ba@region@radius|,
+\item \textbf{Rendering logic}: TikZ-based layout and drawing.
+\end{itemize}
+
+This design ensures extensibility, since new options can be added simply by defining additional keys without modifying the core environment logic.
+
+\subsection{Region Registry, Dynamic Macros, and Color Resolution Mechanism}
+
+This section explains the internal design of the region system, which combines dynamic macro creation, list processing, and TikZ style registration. The implementation is based on three core mechanisms: (i) region declaration, (ii) safe access via conditional macros, and (iii) indexed color resolution.
+
+% =========================================================
+\subsubsection{Region Declaration System}
+% =========================================================
+
+The region declaration command is defined as:
+
+\begin{lstlisting}[language=LaTeX]
+\NewDocumentCommand{\baDeclareRegion}{O{} m m}{%
+  \baRequireAtlas
+  \gappto\ba@regionlist{#2,}
+  \expandafter\gdef\csname ba@caption@#2\endcsname{#1}
+
+  \tikzset{
+    ba/region/#2/.style={
+      /ba/internal/region colors={#3}
+    }
+  }
+}
+\end{lstlisting}
+
+\paragraph{Syntax breakdown}
+
+The command has the signature:
+
+\begin{itemize}
+\item \texttt{O\{\}}: optional caption text
+\item \texttt{m}: region identifier
+\item \texttt{m}: region-specific color list
+\end{itemize}
+
+\paragraph{Step 1: Environment safety check}
+
+\begin{lstlisting}[language=LaTeX]
+\baRequireAtlas
+\end{lstlisting}
+
+ensures that region declarations only occur inside a valid atlas environment.
+
+
+
+\paragraph{Step 2: Region registry list}
+
+\begin{lstlisting}[language=LaTeX]
+\gappto\ba@regionlist{#2,}
+\end{lstlisting}
+
+This appends the region name to a global comma-separated list. This list is later used for iteration in rendering routines.
+
+\paragraph{Step 3: Dynamic macro creation}
+
+\begin{lstlisting}[language=LaTeX]
+\expandafter\gdef\csname ba@caption@#2\endcsname{#1}
+\end{lstlisting}
+
+This constructs a macro dynamically:
+
+\begin{itemize}
+\item If region is \texttt{A}
+\item Then macro becomes \texttt{\textbackslash ba@caption@A}
+\end{itemize}
+
+This mechanism allows storing region-specific metadata without predefined macros.
+
+
+
+\paragraph{Step 4: TikZ style registration}
+
+\begin{lstlisting}[language=LaTeX]
+\tikzset{
+  ba/region/#2/.style={
+    /ba/internal/region colors={#3}
+  }
+}
+\end{lstlisting}
+
+Each region defines a TikZ style of the form:
+
+\begin{lstlisting}[language=LaTeX]
+ba/region/<name>
+\end{lstlisting}
+
+which internally stores the color configuration via the pgfkeys system.
+
+\subsubsection{Appending Data with \texttt{\textbackslash gappto}}
+
+The command
+
+\begin{lstlisting}[language=LaTeX]
+\gappto\ba@regionlist{#2,}
+\end{lstlisting}
+
+is used to build a growing, comma-separated list of region identifiers during compilation.
+
+\paragraph{Meaning of \texttt{\textbackslash gappto}}
+
+The macro \verb|\gappto| is provided by the \texttt{etoolbox} package. Its name stands for:
+
+\begin{center}
+\textbf{g}lobal \textbf{ap}pend \textbf{to}
+\end{center}
+
+It appends content to the end of an existing macro in a way that is \textbf{global}, meaning the change persists outside of local groups.
+
+
+
+\paragraph{Operational behavior}
+
+Given:
+
+\begin{itemize}
+\item existing macro: \verb|\ba@regionlist|
+\item new content: \verb|#2,|
+\end{itemize}
+
+the command performs the equivalent of:
+
+\begin{lstlisting}[language=LaTeX]
+\xdef\ba@regionlist{\ba@regionlist#2,}
+\end{lstlisting}
+
+but in a safer and more controlled way.
+
+
+
+\paragraph{Why the trailing comma is used}
+
+The appended string:
+
+\begin{lstlisting}[language=LaTeX]
+#2,
+\end{lstlisting}
+
+ensures that the list becomes a comma-separated sequence:
+
+\begin{lstlisting}[language=LaTeX]
+A,B,C,
+\end{lstlisting}
+
+This structure is intentionally compatible with \verb|\foreach| loops in TikZ/PGF, which can directly iterate over comma-separated lists.
+
+
+
+\paragraph{Why \texttt{gappto} is preferred over manual definitions}
+
+Alternative approaches include:
+
+\begin{lstlisting}[language=LaTeX]
+\edef\ba@regionlist{\ba@regionlist#2,}
+\end{lstlisting}
+
+However, \verb|\gappto| is preferred because:
+
+\begin{itemize}
+\item it avoids low-level expansion pitfalls,
+\item it preserves macro safety in complex environments,
+\item it integrates well with other \texttt{etoolbox} mechanisms,
+\item it makes intent (\emph{append globally}) explicit.
+\end{itemize}
+
+
+
+\paragraph{Role in the region system}
+
+Within the bifurcation atlas package, \verb|\ba@regionlist| acts as a lightweight registry of all declared regions. Each call to:
+
+\begin{lstlisting}[language=LaTeX]
+\baDeclareRegion
+\end{lstlisting}
+
+extends this registry. The resulting list is later consumed by rendering routines such as:
+
+\begin{itemize}
+\item radial layout construction,
+\item iteration over regions,
+\item color assignment and caption mapping.
+\end{itemize}
+
+Thus, \verb|\gappto| provides the fundamental mechanism for building a dynamic, order-preserving data structure inside TeX.
+
+% =========================================================
+\subsubsection{Safe Access to Region Metadata}
+% =========================================================
+
+Region captions are retrieved using a conditional macro:
+
+\begin{lstlisting}[language=LaTeX]
+\newcommand{\baGetRegionCaption}[1]{%
+  \ifcsname ba@caption@#1\endcsname
+    \csname ba@caption@#1\endcsname
+  \fi
+}
+\end{lstlisting}
+
+\paragraph{Mechanism}
+
+\begin{itemize}
+\item \verb|\ifcsname ... \endcsname| checks whether a macro exists.
+\item If it exists, it is expanded via \verb|\csname ... \endcsname|.
+\item Otherwise, nothing is returned.
+\end{itemize}
+
+This avoids compilation errors when a region has no caption.
+
+
+
+% =========================================================
+\subsubsection{Color Resolution System}
+% =========================================================
+
+Colors are resolved via indexed macros:
+
+\begin{lstlisting}[language=LaTeX]
+\newcommand{\ba@getcolor}[1]{%
+  \ifcsname ba@c#1\endcsname
+    \csname ba@c#1\endcsname%
+  \else white\fi
+}
+\end{lstlisting}
+
+\paragraph{Idea}
+
+Each color is stored as:
+
+\begin{itemize}
+\item \texttt{\textbackslash ba@c1}, \texttt{\textbackslash ba@c2}, ...
+\end{itemize}
+
+so that numeric indexing can be used instead of direct lists.
+
+
+
+\paragraph{Public wrapper}
+
+\begin{lstlisting}[language=LaTeX]
+\newcommand{\baGetColor}[1]{\ba@getcolor{#1}}
+\end{lstlisting}
+
+This provides a stable public interface while keeping the internal implementation hidden.
+
+
+
+% =========================================================
+\subsubsection{Color List Expansion}
+% =========================================================
+
+Before rendering, the color list is expanded into indexed macros:
+
+\begin{lstlisting}[language=LaTeX]
+\newcommand{\baPrepareColors}{%
+  \let\colors\ba@colors%
+  \foreach [count=\i] \c in \colors {%
+    \expandafter\xdef\csname ba@c\i\endcsname{\c}%
+  }%
+}
+\end{lstlisting}
+
+\paragraph{Step-by-step behavior}
+
+\begin{itemize}
+\item \verb|\let\colors\ba@colors| copies the stored list into a local iterable variable.
+\item \verb|\foreach| iterates over each color in the list.
+\item \verb|\xdef| globally defines indexed macros \verb|\ba@c1|, \verb|\ba@c2|, etc.
+\end{itemize}
+
+\paragraph{Result}
+
+A list such as:
+
+\begin{lstlisting}[language=LaTeX]
+red,blue,green
+\end{lstlisting}
+
+becomes:
+
+\begin{lstlisting}[language=LaTeX]
+\ba@c1 = red
+\ba@c2 = blue
+\ba@c3 = green
+\end{lstlisting}
+
+This enables constant-time lookup during rendering.
+
+
+
+\subsubsection{Design Summary}
+
+This subsystem demonstrates a typical LaTeX package architecture:
+
+\begin{itemize}
+\item \textbf{Dynamic macros} for metadata storage
+\item \textbf{pgfkeys integration} for structured configuration
+\item \textbf{Indexed expansion} for efficient rendering
+\item \textbf{Safe conditional access} to avoid undefined macro errors
+\end{itemize}
+
+Together, these mechanisms form a lightweight database-like layer inside TeX, enabling structured region management without external data structures.

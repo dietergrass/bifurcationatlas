@@ -12,6 +12,7 @@
 \RequirePackage{newfloat}
 \RequirePackage{etoolbox}
 \RequirePackage{hyperref}
+\RequirePackage{newfloat}
 
 % =========================================================
 % 0. DEFAULT PARAMETERS
@@ -22,12 +23,15 @@
 \newcommand{\ba@figure@scale}{0.25}
 \newcommand{\ba@caption@shift}{-3mm}
 
-% caption format
-\def\ba@fmtcaption{\alph{baAtlasCaption}}
-\newcommand{\baFormatCaptionLabel}{\ba@fmtcaption}
-
 % atlas label prefix (user-defined via \label)
 \newcommand{\ba@atlaslabel}{}
+
+% caption format
+\def\ba@fmtcaption{\alph{baSubRegion}}
+\newcommand{\baFormatCaptionLabel}{\ba@fmtcaption}
+
+% subref helper
+\newcommand{\basubref}[1]{\ref{sub@#1}}
 
 % =========================================================
 % COUNTERS
@@ -35,30 +39,25 @@
 \newcounter{baAtlasID}
 \newcounter{baRegion}[baAtlasID]
 \newcounter{baSubRegion}
-\newcounter{baAtlasCaption}
 
 \renewcommand{\thebaAtlasID}{\arabic{baAtlasID}}
 \renewcommand{\thebaRegion}{\arabic{baAtlasID}.\baFormatCaptionLabel}
 \renewcommand{\thebaSubRegion}{\baFormatCaptionLabel}
 
-% subref helper
-\newcommand{\basubref}[1]{\ref{sub@#1}}
 
-% =========================================================
-% FLOAT ENVIRONMENT
-% =========================================================
 \DeclareFloatingEnvironment[
   fileext=loa,
   listname={List of Bifurcation Atlases},
   name=Bifurcation Atlas,
   placement=htbp
-]{bifurcationatlas}
-
+]{bifurcationatlasfloat}
 % =========================================================
 % ATLAS STATE
 % =========================================================
 \newif\ifba@inatlas
-\ba@inatlasfalse
+
+\def\ba@atlaslabel{}
+\let\ba@oldlabel\label
 
 \newcommand{\baRequireAtlas}{%
   \ifba@inatlas\else
@@ -68,35 +67,64 @@
   \fi
 }
 
-% Environment lifecycle hooks
-\AtBeginEnvironment{bifurcationatlas}{%
-  \global\ba@inatlastrue
+\NewDocumentEnvironment{bifurcationatlas}{O{}}
+{%
+  % ======================================================
+  % LOCAL SCOPE (replaces hooks completely)
+  % ======================================================
+  \begingroup
 
+  % ------------------------------------------------------
+  % optional user settings
+  % ------------------------------------------------------
+  \pgfkeys{/ba,#1}
+
+  % ------------------------------------------------------
+  % activate atlas
+  % ------------------------------------------------------
+  \ba@inatlastrue
   \stepcounter{baAtlasID}
 
-  % reset per atlas
+  % reset counters
   \setcounter{baRegion}{0}
   \setcounter{baSubRegion}{0}
-  \setcounter{baAtlasCaption}{0}
 
+  % reset local storage
   \def\ba@regionlist{}
   \def\ba@colors{}
   \def\ba@caption{}
-  
-  % capture user label safely
-  \global\let\ba@oldlabel\label
-  \gdef\ba@atlaslabel{}%
+
+  % ------------------------------------------------------
+  % LABEL CAPTURE (local, safe, no global patching)
+  % ------------------------------------------------------
+  \let\ba@oldlabel\label
+  \gdef\ba@atlaslabel{}
+
   \renewcommand{\label}[1]{%
     \ifx\ba@atlaslabel\@empty
-      \gdef\ba@atlaslabel{#1}%
+      \gdef\ba@atlaslabel{##1}%
     \fi
-    \ba@oldlabel{#1}%
+    \ba@oldlabel{##1}%
   }%
-}
 
-\AtEndEnvironment{bifurcationatlas}{%
-  \global\ba@inatlasfalse
-  \global\let\label\ba@oldlabel
+  % ------------------------------------------------------
+  % OPEN FLOAT (core content container)
+  % ------------------------------------------------------
+  \begin{bifurcationatlasfloat}
+}
+{%
+  % ------------------------------------------------------
+  % CLOSE FLOAT
+  % ------------------------------------------------------
+  \end{bifurcationatlasfloat}
+
+  % ------------------------------------------------------
+  % CLEANUP (automatic via group)
+  % ------------------------------------------------------
+  \ba@inatlasfalse
+  \let\label\ba@oldlabel
+
+  \endgroup
 }
 % =========================================================
 % PGFKEYS
@@ -112,10 +140,10 @@
   internal/region colors/.store in=\ba@colors,
   internal/region caption/.store in=\ba@caption,
   caption label/.is choice,
-  /ba/caption label/alpha/.code  = {\def\ba@fmtcaption{\alph{baAtlasCaption}}},
-  /ba/caption label/roman/.code  = {\def\ba@fmtcaption{\roman{baAtlasCaption}}},
-  /ba/caption label/Roman/.code  = {\def\ba@fmtcaption{\Roman{baAtlasCaption}}},
-  /ba/caption label/arabic/.code = {\def\ba@fmtcaption{\arabic{baAtlasCaption}}}
+  /ba/caption label/alpha/.code  = {\def\ba@fmtcaption{\alph{baSubRegion}}},
+  /ba/caption label/roman/.code  = {\def\ba@fmtcaption{\roman{baSubRegion}}},
+  /ba/caption label/Roman/.code  = {\def\ba@fmtcaption{\Roman{baSubRegion}}},
+  /ba/caption label/arabic/.code = {\def\ba@fmtcaption{\arabic{baSubRegion}}}
 }
 
 \newcommand{\baSetup}[1]{\pgfkeys{/ba,#1}}
@@ -202,9 +230,6 @@
 \NewDocumentCommand{\baRadialAtlas}{O{0} m m}{%
 \baRequireAtlas
 
-  % initialize caption index (may be shifted by header caption)
-  \setcounter{baAtlasCaption}{#1}
-
   % compute number of regions
   \foreach \r [count=\i] in {#2}{%
     \xdef\baLastIndex{\i}%
@@ -213,10 +238,8 @@
   % render regions
   \foreach \r [count=\i] in {#2}{%
 
-    %\stepcounter{baAtlasRegion}
-    \stepcounter{baAtlasCaption}
+	\refstepcounter{baSubRegion}
 	\refstepcounter{baRegion}
-	\stepcounter{baSubRegion}
 	\label{\ba@atlaslabel.\arabic{baRegion}}
 	\protected@write\@auxout{}{%
 	  \string\newlabel{sub@\ba@atlaslabel.\arabic{baRegion}}%
@@ -266,8 +289,7 @@
     \def\ba@offset{0}
   \else
     \def\ba@offset{1}
-	\stepcounter{baAtlasCaption}
-	\stepcounter{baSubRegion}
+	\refstepcounter{baSubRegion}
 	\refstepcounter{baRegion}
 	\label{\ba@atlaslabel.\arabic{baRegion}}
 	\protected@write\@auxout{}{%

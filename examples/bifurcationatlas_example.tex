@@ -158,14 +158,11 @@
 % Each region can be referenced via:
 %   \label{ba:R1}, \label{ba:R2}, ...
 % =========================================================
-As shown in Region~\basubref{ba:test1.1}, the system is stable.
-As shown in Fig~\ref{ba:test1.1}, the system is stable.
+As shown in Region~\basubref{ba:test1.1},\basubref{ba:test1.6}, the system is stable.
+As shown in Fig~\ref{ba:test1.1},\ref{ba:test1.2},\ref{ba:test1.8}, the system is stable.
 
-\baSetup{
-  caption label = roman
-}
 
-\begin{bifurcationatlas}
+\begin{bifurcationatlas}[caption label = roman]
 \label{ba:test2}
 \centering
 % =========================================================
@@ -193,7 +190,36 @@ As shown in Fig~\ref{ba:test1.1}, the system is stable.
 \caption{Structured cartel bifurcation atlas}
 
 \end{bifurcationatlas}
-As shown in Region~\ref{ba:test2.1}, the system is stable.
+As shown in Fig.~\ref{ba:test2.1},\ref{ba:test2.7} the system is stable.
 
+\begin{bifurcationatlas}
+\label{ba:test3}
+\centering
+% =========================================================
+% ATLAS RENDERING
+% =========================================================
+% \baAtlasFigure combines:
+%   (1) background bifurcation diagram (PDF)
+%   (2) radial layout of region renderings
+%   (3) region-specific pic template ("Test")
+%
+% Arguments:
+%   1: background image
+%   2: list of regions
+%   3: pic template name
+% =========================================================
+\baDeclareRegion[Region 1]{R1}{LLEqui,HLEqui,HHEqui,HHEqui}
+\baDeclareRegion[Region 2]{R2}{LLEqui,HLEqui,HHEqui,MEqui}
+\baDeclareRegion[Region 3]{R3}{LLEqui,HLEqui,MEqui,MEqui}
+\baDeclareRegion[Region 4]{R4}{LLEqui,HLEqui,HLEqui,HLEqui}
+\baDeclareRegion[Region 5]{R5}{LLEqui,LLEqui,LLEqui,HLEqui}
+\baDeclareRegion[Region 6]{R6}{LLEqui,HLEqui,HHEqui,HLEqui}
+\baDeclareRegion[Region 7]{R7}{LLEqui,HHEqui,HHEqui,HHEqui}
 
+\baAtlasFigure[Bifurcation Diagram]{bifurcation}{R1,R2,R3,R4,R5,R6,R7}{Test}
+
+\caption{Structured bifurcation atlas the second}
+
+\end{bifurcationatlas}
+As shown in Fig.~\ref{ba:test3.3},\ref{ba:test3.1} the system is stable. As shown in Region~\basubref{ba:test3.2},\basubref{ba:test3.7}, the system is stable.
 \end{document}

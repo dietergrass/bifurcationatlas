@@ -1,0 +1,103 @@
+\section{Low-Level Command Construction and Dynamic Macros}
+\subsubsection{Dynamic Control Sequences with \texttt{\textbackslash csname...\textbackslash endcsname}}
+
+The construct
+
+\begin{lstlisting}[language=LaTeX]
+\csname ba@caption@#2\endcsname
+\end{lstlisting}
+
+is used to create or access control sequence names dynamically at runtime. Instead of writing a fixed macro name such as \verb|\ba@caption@A|, the \verb|\csname...\endcsname| mechanism allows the macro name to be constructed from expandable content.
+
+
+
+\paragraph{Syntax meaning}
+
+The syntax
+
+\begin{lstlisting}[language=LaTeX]
+\csname <name components>\endcsname
+\end{lstlisting}
+
+instructs TeX to:
+
+\begin{itemize}
+\item concatenate all expandable tokens between \verb|\csname| and \verb|\endcsname|,
+\item interpret the resulting string as a control sequence name,
+\item and execute or define that control sequence.
+\end{itemize}
+
+
+
+\paragraph{Example of dynamic macro construction}
+
+Given:
+
+\begin{lstlisting}[language=LaTeX]
+#2 = A
+\end{lstlisting}
+
+the expression
+
+\begin{lstlisting}[language=LaTeX]
+\csname ba@caption@A\endcsname
+\end{lstlisting}
+
+is formed, which corresponds to the macro:
+
+\begin{lstlisting}[language=LaTeX]
+\ba@caption@A
+\end{lstlisting}
+
+Thus, the mechanism allows the programmatic creation of structured namespaces.
+
+
+
+\paragraph{Usage in definitions}
+
+A common use is dynamic macro assignment:
+
+\begin{lstlisting}[language=LaTeX]
+\expandafter\gdef\csname ba@caption@#2\endcsname{#1}
+\end{lstlisting}
+
+This defines a macro whose name depends on the argument \verb|#2|, enabling storage of multiple independent values under systematically generated keys.
+
+
+
+\paragraph{Why \texttt{\textbackslash expandafter} is needed}
+
+Because \verb|\csname...\endcsname| must be fully constructed before assignment, TeX often requires:
+
+\begin{lstlisting}[language=LaTeX]
+\expandafter
+\end{lstlisting}
+
+to ensure that the name is expanded before \verb|\gdef| or \verb|\def| is applied.
+
+
+
+\paragraph{Conceptual interpretation}
+
+The construct can be understood as a form of \emph{string-to-macro conversion}:
+
+\begin{itemize}
+\item Input: a string-like token sequence (e.g.\ \texttt{ba@caption@A})
+\item Output: an actual TeX control sequence (\verb|\ba@caption@A|)
+\end{itemize}
+
+This mechanism is fundamental for implementing dictionaries, registries, and indexed data structures in classical \TeX{} programming, where no native data containers exist.
+
+
+
+\paragraph{Role in the bifurcation atlas system}
+
+In the context of the bifurcation atlas package, \verb|\csname...\endcsname| is used to:
+
+\begin{itemize}
+\item store region-specific captions,
+\item create indexed color variables,
+\item build hierarchical naming structures such as \texttt{ba@c1}, \texttt{ba@c2}, etc.
+\end{itemize}
+
+It is therefore a core building block for simulating structured data inside the TeX macro system.
