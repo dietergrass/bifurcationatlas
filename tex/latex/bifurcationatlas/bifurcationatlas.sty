@@ -2,7 +2,7 @@
 \ProvidesPackage{bifurcationatlas}[2026/06/10 v0.1 Structured bifurcation diagram toolkit]
 
 % =========================================================
-% REQUIRED PACKAGES
+% 1. DEPENDENCIES
 % =========================================================
 \RequirePackage{tikz}
 \RequirePackage{xparse}
@@ -12,29 +12,33 @@
 \RequirePackage{newfloat}
 \RequirePackage{etoolbox}
 \RequirePackage{hyperref}
-\RequirePackage{newfloat}
 
 % =========================================================
-% 0. DEFAULT PARAMETERS
+% 2. GLOBAL DEFAULT PARAMETERS
 % =========================================================
+
+% geometry / layout
 \newcommand{\ba@region@scale}{1.25}
 \newcommand{\ba@region@radius}{6}
-\newcommand{\ba@caption@style}{\scriptsize}
 \newcommand{\ba@figure@scale}{0.25}
 \newcommand{\ba@caption@shift}{-3mm}
 
-% atlas label prefix (user-defined via \label)
-\newcommand{\ba@atlaslabel}{}
+% text styling
+\newcommand{\ba@caption@style}{\scriptsize}
 
-% caption format
+% caption numbering format
 \def\ba@fmtcaption{\alph{baSubRegion}}
 \newcommand{\baFormatCaptionLabel}{\ba@fmtcaption}
 
-% subref helper
+% atlas label system (user + internal)
+\newcommand{\ba@atlaslabel}{}
+\def\ba@atlasbase{}
+
+% helper
 \newcommand{\basubref}[1]{\ref{sub@#1}}
 
 % =========================================================
-% COUNTERS
+% 3. COUNTERS
 % =========================================================
 \newcounter{baAtlasID}
 \newcounter{baRegion}[baAtlasID]
@@ -42,13 +46,14 @@
 
 \newcount\ba@i
 \newcount\ba@j
+
 \renewcommand{\thebaAtlasID}{\arabic{baAtlasID}}
 \renewcommand{\thebaRegion}{\arabic{baAtlasID}.\baFormatCaptionLabel}
 \renewcommand{\thebaSubRegion}{\baFormatCaptionLabel}
 
-\newif\ifba@positional
-
-
+% =========================================================
+% 4. FLOAT ENVIRONMENT
+% =========================================================
 \DeclareFloatingEnvironment[
   fileext=loa,
   listname={List of Bifurcation Atlases},
@@ -57,16 +62,17 @@
 ]{bifurcationatlasfloat}
 
 % =========================================================
-% ATLAS STATE
+% 5. STATE FLAGS
 % =========================================================
 \newif\ifba@inatlas
 \newif\ifba@userlabel
-
-\def\ba@atlaslabel{} % user label (optional alias only)
-\def\ba@atlasbase{}  % <<< NEW: immutable internal ID
+\newif\ifba@positional
 
 \let\ba@oldlabel\label
 
+% =========================================================
+% 6. ATLAS SAFETY GUARD
+% =========================================================
 \newcommand{\baRequireAtlas}{%
   \ifba@inatlas\else
     \PackageError{bifurcationatlas}
@@ -75,72 +81,74 @@
   \fi
 }
 
+% =========================================================
+% 7. ATLAS ENVIRONMENT
+% =========================================================
 \NewDocumentEnvironment{bifurcationatlas}{O{}}
 {%
   \begingroup
 
+  % user configuration
   \pgfkeys{/ba,#1}
 
-  % activate atlas
+  % activate atlas mode
   \ba@inatlastrue
   \stepcounter{baAtlasID}
 
-  % ------------------------------------------------------
-  % FIX 1: IMMUTABLE ATLAS BASE (core correction)
-  % ------------------------------------------------------
+  % internal immutable base label
   \edef\ba@atlasbase{ba@\thebaAtlasID}%
 
   % reset counters
   \setcounter{baRegion}{0}
   \setcounter{baSubRegion}{0}
 
-  % reset local storage
+  % reset internal storage
   \def\ba@regionlist{}
   \def\ba@colors{}
   \def\ba@colornames{}
   \def\ba@caption{}
-	\ifx\ba@atlaslabel\@empty
-	  \edef\ba@atlasbase{ba@\thebaAtlasID}%
-	\else
-	  \edef\ba@atlasbase{\ba@atlaslabel}%
-	\fi
-  % ------------------------------------------------------
-  % LABEL INITIALIZATION
-  % ------------------------------------------------------
+
+  % label interception (captures optional user label)
   \ba@userlabelfalse
   \let\ba@atlaslabel\empty
 
-  % capture label safely
   \let\ba@oldlabel\label
   \renewcommand{\label}[1]{%
     \edef\ba@atlaslabel{##1}%
     \ba@oldlabel{##1}%
   }%
 
+  % open float
   \begin{bifurcationatlasfloat}
 }
 {%
+  % close float
   \end{bifurcationatlasfloat}
 
+  % restore state
   \ba@inatlasfalse
   \let\label\ba@oldlabel
 
   \endgroup
 }
+
 % =========================================================
-% PGFKEYS
+% 8. PGFKEYS INTERFACE
 % =========================================================
 \pgfkeys{
   /ba/.is family,
   /ba,
+  % layout controls
   region scale/.code   = {\renewcommand{\ba@region@scale}{#1}},
   region radius/.code  = {\renewcommand{\ba@region@radius}{#1}},
-  caption style/.code  = {\renewcommand{\ba@caption@style}{#1}},
   figure scale/.code   = {\renewcommand{\ba@figure@scale}{#1}},
   caption shift/.code  = {\renewcommand{\ba@caption@shift}{#1}},
+  caption style/.code  = {\renewcommand{\ba@caption@style}{#1}},
+  % internal storage
   internal/region colors/.store in=\ba@colors,
   internal/region colornames/.store in=\ba@colornames,
   internal/region caption/.store in=\ba@caption,
+  % caption style selector
   caption label/.is choice,
   /ba/caption label/alpha/.code  = {\def\ba@fmtcaption{\alph{baSubRegion}}},
   /ba/caption label/roman/.code  = {\def\ba@fmtcaption{\roman{baSubRegion}}},
@@ -150,92 +158,75 @@
 
 \newcommand{\baSetup}[1]{\pgfkeys{/ba,#1}}
 
+% =========================================================
+% 9. REGION DECLARATION
+% =========================================================
 
-% =========================================================
-% REGION DECLARATION
-% =========================================================
+% ---------------------------------------------------------
+% indexed (positional) declaration
+% ---------------------------------------------------------
 \NewDocumentCommand{\baDeclareRegion}{O{} m m}{%
   \baRequireAtlas
-  \ba@positionaltrue 
-  % store region name
-  \gappto\ba@regionlist{#2,}%
+  \ba@positionaltrue
 
-  % store caption
-  \expandafter\gdef\csname ba@caption@#2\endcsname{#1}%
+  \gappto\ba@regionlist{#2,}
+  \expandafter\gdef\csname ba@caption@#2\endcsname{#1}
 
-  % -------------------------------------------------
-  % build index list (LOCAL SAFE VERSION)
-  % -------------------------------------------------
-	
-	\def\ba@indexlist{}%
-	\ba@i=0
-	
-	\@for\n:=#3\do{%
-	  \advance\ba@i by 1%
-	
-	  \ifx\ba@indexlist\empty
-	    \edef\ba@indexlist{\the\ba@i}%
-	  \else
-	    \edef\ba@indexlist{\ba@indexlist,\the\ba@i}%
-	  \fi
-	}
-  %\typeout{[DEBUG indexlist: ]\ba@indexlist}
+  % build index list
+  \def\ba@indexlist{}
+  \ba@i=0
+  \@for\n:=#3\do{%
+    \advance\ba@i by 1
+    \ifx\ba@indexlist\empty
+      \edef\ba@indexlist{\the\ba@i}%
+    \else
+      \edef\ba@indexlist{\ba@indexlist,\the\ba@i}%
+    \fi
+  }
 
-  % -------------------------------------------------
-  % store into pgf keys
-  % -------------------------------------------------
   \tikzset{
     ba/region/#2/.style={
       /ba/internal/region colors={#3},
       /ba/internal/region colornames={\ba@indexlist}
     }
-  }%
+  }
 }
 
+% ---------------------------------------------------------
+% semantic key=value declaration
+% ---------------------------------------------------------
 \NewDocumentCommand{\baDeclareRegionData}{O{} m m}{%
   \baRequireAtlas
-  \ba@positionalfalse 
-  % store region name
-  \gappto\ba@regionlist{#2,}%
+  \ba@positionalfalse
 
-  % store caption
-  \expandafter\gdef\csname ba@caption@#2\endcsname{#1}%
+  \gappto\ba@regionlist{#2,}
+  \expandafter\gdef\csname ba@caption@#2\endcsname{#1}
 
-  % -------------------------------------------------
-  % parse semantic pairs: SL=LEqui, SR=HEqui
-  % -------------------------------------------------
-
-  \def\ba@colors{}%
-  \def\ba@colornames{}%
+  \def\ba@colors{}
+  \def\ba@colornames{}
 
   \@for\ba@pair:=#3\do{%
-
-    % split name = value
     \expandafter\ba@splitpair\ba@pair\relax
-  }%
-	
-	%\typeout{TMPCOLORS DATA=[\ba@colors], REGION #2}%
-	%\typeout{TMPNAMES DATA=[\ba@colornames], REGION #2}%
-  % store into pgfkeys (optional continuation layer)
-  \tikzset{
-    ba/region/#2/.style/.expanded={
-      /ba/internal/region colors/.expanded={\ba@colors},
-      /ba/internal/region colornames/.expanded={\ba@colornames}
-    }
-  }%
-}
-\def\ba@splitpair#1=#2\relax{%
-  % #1 = name (SL)
-  % #2 = color (LEqui)
+  }
 
-  % append color list
+  \expandafter\tikzset\expandafter{
+    ba/region/#2/.style/.expanded={
+      /ba/internal/region colors={\ba@colors},
+      /ba/internal/region colornames={\ba@colornames}
+    }
+  }
+}
+
+% =========================================================
+% 10. INTERNAL PARSING HELPERS
+% =========================================================
+\def\ba@splitpair#1=#2\relax{%
   \ifx\ba@colors\empty
     \edef\ba@colors{\ba@stripspaces{#2}}%
   \else
     \edef\ba@colors{\ba@colors,\ba@stripspaces{#2}}%
   \fi
 
-  % append name list
   \ifx\ba@colornames\empty
     \edef\ba@colornames{\ba@stripspaces{#1}}%
   \else
@@ -243,13 +234,10 @@
   \fi
 }
 
-
-\def\ba@stripspaces#1{%
-  \zap@space#1 \@empty
-}
+\def\ba@stripspaces#1{\zap@space#1 \@empty}
 
 % =========================================================
-% ACCESS
+% 11. ACCESS HELPERS
 % =========================================================
 \newcommand{\baGetRegionCaption}[1]{%
   \ifcsname ba@caption@#1\endcsname
@@ -258,44 +246,61 @@
 }
 
 % =========================================================
-% COLORS
+% 12. COLOR SYSTEM
 % =========================================================
 \newcommand{\ba@getcolor}[1]{%
   \ifcsname ba@color@#1\endcsname
     \csname ba@color@#1\endcsname
   \else white\fi
 }
-
 \newcommand{\baGetColor}[1]{\ba@getcolor{#1}}
 
-\newcommand{\baPrepareColors}{
-\ifba@positional
-	\baPrepareColorsPosition
-\else
-	\baPrepareColorsNames
-\fi
+% =========================================================
+% 13. PIC SYSTEM (CORE RENDERING)
+% =========================================================
+\newcommand{\baNewPic}[2]{%
+  \tikzset{
+    #1/.pic={%
+      \baPrepareColors
+      #2%
+    }%
+  }%
 }
+
+% =========================================================
+% 13b. COLOR PREPARATION SYSTEM
+% =========================================================
+% This system resolves semantic color mappings either
+% by positional order or by named identifiers.
+% =========================================================
+
+\newcommand{\baPrepareColors}{%
+  \ifba@positional
+    \baPrepareColorsPosition
+  \else
+    \baPrepareColorsNames
+  \fi
+}
+
+% ---------------------------------------------------------
+% POSITIONAL COLOR ASSIGNMENT
+% (colors mapped by index order)
+% ---------------------------------------------------------
 \newcommand{\baPrepareColorsPosition}{%
   \let\ba@tmpcolors\ba@colors%
   \let\ba@tmpnames\ba@colornames%
 
-  %\typeout{TMPCOLORS, baPrepareColorsPosition=[\ba@tmpcolors]}%
-  %\typeout{TMPNAMES, baPrepareColorsPosition=[\ba@colornames]}%
-
-  % counter for pairing colors <-> names
   \ba@i=0
-  % -----------------------------------------
-  % iterate over colors (outer structure)
-  % -----------------------------------------
-	  
-	\edef\ba@tmp{\ba@tmpnames}%
-  
+
+  % iterate over colors
+  \edef\ba@tmp{\ba@tmpnames}%
+
   \@for\c:=\ba@tmpcolors\do{%
     \advance\ba@i by 1%
-    \ba@j=1
+    \ba@j=1%
+
     \@for\n:=\ba@tmp\do{%
       \ifnum\ba@j=\ba@i
-       %\typeout{[DEBUG POSITION]: ba@color@\n = \c}%
         \expandafter\xdef\csname ba@color@\n\endcsname{\c}%
       \fi
       \advance\ba@j by 1%
@@ -303,11 +308,13 @@
   }%
 }
 
+% ---------------------------------------------------------
+% NAME-BASED COLOR ASSIGNMENT
+% (colors mapped by semantic names)
+% ---------------------------------------------------------
 \newcommand{\baPrepareColorsNames}{%
   \let\ba@tmpcolors\ba@colors%
   \let\ba@tmpnames\ba@colornames%
-  %\typeout{TMPCOLORS, PrepareColorsNames=[\ba@tmpcolors]}%
-  %\typeout{TMPNAMES, PrepareColorsNames=[\ba@colornames]}%
 
   \ba@i=0%
   \ba@j=0%
@@ -322,23 +329,14 @@
       \advance\ba@j by 1%
 
       \ifnum\ba@j=\ba@i
-      %\typeout{[DEBUG NAMES]: ba@color@\n = \c}%
         \expandafter\xdef\csname ba@color@\n\endcsname{\c}%
       \fi
     }%
   }%
 }
-% =========================================================
-% PIC SYSTEM
-% =========================================================
-\newcommand{\baNewPic}[2]{%
-  \tikzset{
-    #1/.pic={\baPrepareColors #2}
-  }%
-}
 
 % =========================================================
-% RENDERING
+% 14. RENDERING ENGINE
 % =========================================================
 \newcommand{\baRenderRegion}[2]{%
 \scalebox{\ba@region@scale}{%
@@ -347,90 +345,57 @@
 \end{tikzpicture}}%
 }
 
-% =========================================================
-% LAYOUT
-% =========================================================
 \newcommand{\baPlaceRadialNode}[3]{%
   \pgfmathsetmacro{\ba@angle}{90-(#1-1)*360/#2}%
   \node at (\ba@angle:\ba@region@radius) {#3};
 }
 
 % =========================================================
-% 9. RADIAL ATLAS RENDERER
+% 15. RADIAL ATLAS RENDERER
 % =========================================================
-% Inputs:
-%   #1 = caption offset (0 or 1 typically)
-%   #2 = region list
-%   #3 = pic template
-% =========================================================
-
 \NewDocumentCommand{\baRadialAtlas}{O{0} m m}{%
 \baRequireAtlas
 
-  % compute number of regions
   \foreach \r [count=\i] in {#2}{%
     \xdef\baLastIndex{\i}%
-  }%
+  }
 
-  % render regions
   \foreach \r [count=\i] in {#2}{%
-
     \refstepcounter{baSubRegion}
     \refstepcounter{baRegion}
 
-    % --------------------------------------------------
-    % FIX: IMMUTABLE LABEL CONSTRUCTION
-    % --------------------------------------------------
-    \edef\ba@tmp@label{%
-      \ba@atlasbase.\arabic{baRegion}%
-    }%
-
+    \edef\ba@tmp@label{\ba@atlasbase.\arabic{baRegion}}%
     \label{\ba@tmp@label}%
 
     \protected@write\@auxout{}{%
       \string\newlabel{sub@\ba@tmp@label}%
       {{\thebaSubRegion}{\thepage}}%
-    }%
+    }
 
     \edef\baTmpCaption{\baGetRegionCaption{\r}}
 
     \baPlaceRadialNode{\i}{\baLastIndex}{%
       \begin{tabular}{c}
         \baRenderRegion{#3}{\r}\\[2mm]
-
-        % optional region caption
-        \if\relax\detokenize{\baTmpCaption}\relax
-        \else
+        \if\relax\detokenize{\baTmpCaption}\relax\else
           {\ba@caption@style (\baFormatCaptionLabel)~\baTmpCaption}\\\\
         \fi
       \end{tabular}
-    }%
-  }%
+    }
+  }
 }
 
 % =========================================================
-% 10. ATLAS FIGURE (HIGH-LEVEL USER COMMAND)
+% 16. HIGH LEVEL FIGURE COMMAND
 % =========================================================
-% Combines:
-%   - background diagram
-%   - optional caption
-%   - radial overlay
-% =========================================================
-
 \NewDocumentCommand{\baAtlasFigure}{O{} m m m}{%
 \baRequireAtlas
 
 \begin{tikzpicture}
 
-  % -----------------------------------------------------
-  % background bifurcation diagram
-  % -----------------------------------------------------
   \node (bg) at (0,0)
     {\includegraphics[scale=\ba@figure@scale]{#2}};
 
-  % -----------------------------------------------------
-  % optional caption below background figure
-  % -----------------------------------------------------
   \if\relax\detokenize{#1}\relax
     \def\ba@offset{0}
   \else
@@ -439,26 +404,19 @@
     \refstepcounter{baSubRegion}
     \refstepcounter{baRegion}
 
-    % FIX: immutable label base
-    \edef\ba@tmp@label{%
-      \ba@atlasbase.\arabic{baRegion}%
-    }%
-
+    \edef\ba@tmp@label{\ba@atlasbase.\arabic{baRegion}}%
     \label{\ba@tmp@label}%
 
     \protected@write\@auxout{}{%
       \string\newlabel{sub@\ba@tmp@label}%
       {{\thebaSubRegion}{\thepage}}%
-    }%
+    }
 
     \node[anchor=north]
       at ([yshift=-\ba@caption@shift]bg.south)
       {\ba@caption@style (\baFormatCaptionLabel)~#1};
   \fi
 
-  % -----------------------------------------------------
-  % radial overlay
-  % -----------------------------------------------------
   \baRadialAtlas[\ba@offset]{#3}{#4}
 
 \end{tikzpicture}
