@@ -4,3 +4,7 @@
 *.out
 *.synctex.gz
 *.pdf
+
+# but NOT in this folder
+!examples/fig/
+!examples/fig/*.pdf
