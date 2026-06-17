@@ -29,14 +29,7 @@
 \definecolor{LLEqui}{RGB}{204, 121, 167} % purple
 \definecolor{TEqui}{RGB}{213, 94, 0} % vermilion red-orange
 
-\definecolor{LEqui}{RGB}{204, 121, 167} % purple
-\definecolor{HEqui}{RGB}{213, 94, 0} % vermilion red-orange
-
-\definecolor{Stable}{RGB}{0,110,0}        % green!70!black
-\definecolor{Unstable}{RGB}{255,77,77}    % red!70
-\definecolor{Saddle}{RGB}{255,165,0}      % orange
-\definecolor{Focus}{RGB}{102,102,255}     % blue!60
-\definecolor{Periodic}{RGB}{26,26,255}    % blue!90% =========================================================
+% =========================================================
 % PIC TEMPLATE DEFINITION
 % =========================================================
 % This defines a reusable TikZ picture called "Test".
@@ -119,59 +112,7 @@
 }
 }
 
-\baNewPic{SimpleState}{{
-  % =========================================
-  % LEFT STATE (SL)
-  % =========================================
-  \fill[\baGetColor{SL}] (0,0) rectangle (1,2);
 
-  % =========================================
-  % RIGHT STATE (SR)
-  % =========================================
-  \fill[\baGetColor{SR}] (1,0) rectangle (2,2);
-
-  % =========================================
-  % STRUCTURE LINES
-  % =========================================
-  %\draw[line width=2pt,black] (0,2) -- (0,0) -- (2,0);
-  %\draw (0,1) -- (2,1);
-  %\draw (1,0) -- (1,2);
-}
-}
-
-\baNewPic{RoundCartel}{
-{
-    % ============================================
-    % five circles using semantic color names
-    % ============================================
-
-    \fill[\baGetColor{NorthWest}] (-1, 1) circle (0.35);
-    \fill[\baGetColor{NorthEast}] ( 1, 1) circle (0.35);
-
-    \fill[\baGetColor{SouthWest}] (-1,-1) circle (0.35);
-    \fill[\baGetColor{SouthEast}] ( 1,-1) circle (0.35);
-
-    \fill[\baGetColor{Center}] (0,0) circle (0.45);
-
-    % labels
-    \node at (-1, 1) {\tiny NW};
-    \node at ( 1, 1) {\tiny NE};
-
-    \node at (-1,-1) {\tiny SW};
-    \node at ( 1,-1) {\tiny SE};
-
-    \node at (0,0) {\tiny C};
-
-    % outline
-    \draw[line width=1pt] (-1,1) circle (0.35);
-    \draw[line width=1pt] ( 1,1) circle (0.35);
-
-    \draw[line width=1pt] (-1,-1) circle (0.35);
-    \draw[line width=1pt] ( 1,-1) circle (0.35);
-
-    \draw[line width=1pt] (0,0) circle (0.45);
-}
-}
 \begin{document}
 \baSetup{
   region scale = 1.25,
@@ -281,93 +222,4 @@ As shown in Fig.~\ref{ba:test2.1},\ref{ba:test2.7} the system is stable.
 
 \end{bifurcationatlas}
 As shown in Fig.~\ref{ba:test3.3},\ref{ba:test3.1} the system is stable. As shown in Region~\basubref{ba:test3.2},\basubref{ba:test3.7}, the system is stable.
-
-\begin{bifurcationatlas}
-\label{ba:test4}
-\baDeclareRegionData[Region 1]{R1}{SL=LEqui,SR=HEqui}
-\baDeclareRegionData[Region 2]{R2}{SL=HEqui,SR=HEqui}
-\baDeclareRegionData[Region 3]{R3}{SL=LEqui,SR=LEqui}
-%\baDeclareRegion[Region 1]{R1}{LLEqui,HLEqui,HHEqui,HHEqui}
-
-%\baRenderRegion{SimpleState}{R1}
-%\baRenderRegion{Test}{R1}
-\baAtlasFigure[Bifurcation Diagram]{bifurcation}{R1,R2,R3}{SimpleState}
-\end{bifurcationatlas}
-
-\begin{bifurcationatlas}[region scale = 0.8, region radius = 5,figure scale = 0.225
-]
-\label{ba:carteltest}
-\centering
-
-\baDeclareRegionData[Region 1]{R1}{
-    NorthWest=Stable,
-    NorthEast=Stable,
-    SouthWest=Stable,
-    SouthEast=Stable,
-    Center=Stable
-}
-
-\baDeclareRegionData[Region 2]{R2}{
-    NorthWest=Stable,
-    NorthEast=Unstable,
-    SouthWest=Stable,
-    SouthEast=Stable,
-    Center=Stable
-}
-
-\baDeclareRegionData[Region 3]{R3}{
-    NorthWest=Stable,
-    NorthEast=Unstable,
-    SouthWest=Saddle,
-    SouthEast=Stable,
-    Center=Stable
-}
-
-\baDeclareRegionData[Region 4]{R4}{
-    NorthWest=Stable,
-    NorthEast=Unstable,
-    SouthWest=Saddle,
-    SouthEast=Focus,
-    Center=Stable
-}
-
-\baDeclareRegionData[Region 5]{R5}{
-    NorthWest=Stable,
-    NorthEast=Unstable,
-    SouthWest=Saddle,
-    SouthEast=Focus,
-    Center=Periodic
-}
-
-\baDeclareRegionData[Region 6]{R6}{
-    NorthWest=Periodic,
-    NorthEast=Unstable,
-    SouthWest=Saddle,
-    SouthEast=Focus,
-    Center=Stable
-}
-
-\baDeclareRegionData[Region 7]{R7}{
-    NorthWest=Periodic,
-    NorthEast=Periodic,
-    SouthWest=Saddle,
-    SouthEast=Focus,
-    Center=Stable
-}
-
-\baDeclareRegionData[Region 8]{R8}{
-    NorthWest=Periodic,
-    NorthEast=Periodic,
-    SouthWest=Periodic,
-    SouthEast=Focus,
-    Center=Stable
-}
-
-\baAtlasFigure[Test Diagram]{bifurcation}
-  {R1,R2,R3,R4,R5,R6,R7,R8}
-  {RoundCartel}
-
-\caption{Name-based region test using semantic color mappings.}
-
-\end{bifurcationatlas}
 \end{document}

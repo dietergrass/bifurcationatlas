@@ -406,7 +406,7 @@ These ensure:
 
 \begin{itemize}
 \item a new globally referenceable region is created,
-\item LaTeX referencing via \lstinline|\ref| is activated.
+\item \LaTeX referencing via \lstinline|\ref| is activated.
 \end{itemize}
 
 
@@ -701,3 +701,146 @@ The design separates concerns cleanly:
 \item layout (radial mapping),
 \item metadata (labels and captions).
 \end{itemize}
+
+\subsection{Expl3-Based Key–Value Parsing for Dynamic Region Data}
+
+This implementation uses the \LaTeX3 programming layer (\texttt{expl3}) to build a lightweight key–value parser that allows users to define region attributes in a fully dynamic way. Unlike \texttt{pgfkeys}, which expects a predefined key structure, this approach supports arbitrary user-defined keys and stores them in a structured internal namespace using control sequences.
+
+The code is wrapped between \verb|\ExplSyntaxOn| and \verb|\ExplSyntaxOff|, which activates and deactivates \LaTeX3 syntax conventions such as \texttt{N}, \texttt{n}, and \texttt{clist} argument specifiers.
+
+\begin{lstlisting}[language=LaTeX]
+\ExplSyntaxOn
+
+\cs_new_protected:Npn \ba@parsekeyvalues #1
+ {
+   \clist_map_inline:nn {#1}
+    {
+      \ba@split_keyval:n ##1
+    }
+ }
+
+\cs_new_protected:Npn \ba@split_keyval:n #1
+ {
+   \ba@split_aux:w #1=\q_nil
+ }
+
+\cs_new_protected:Npn \ba@split_aux:w #1=#2\q_nil
+ {
+   \tl_if_blank:nF {#1}
+     {
+       \expandafter\gdef\csname
+         ba@regiondata@\ba@currentregiondata @#1
+       \endcsname {#2}
+     }
+ }
+
+\ExplSyntaxOff
+\end{lstlisting}
+
+\subsubsection*{1. High-Level Idea}
+
+The goal of this code is to transform a comma-separated list of \texttt{key=value} pairs into internal macros of the form:
+
+\begin{center}
+\texttt{\textbackslash ba@regiondata@<region>@<key> = <value>}
+\end{center}
+
+This effectively implements a lightweight dictionary structure in pure TeX.
+
+\subsubsection*{2. Entry Point: \texttt{\textbackslash ba@parsekeyvalues}}
+
+\begin{itemize}
+\item The function takes a single argument containing a comma-separated list, e.g.
+\begin{lstlisting}[language=LaTeX]
+southwest=red, southeast=blue, boundary=black
+\end{lstlisting}
+
+\item It converts this list into a \texttt{clist} (comma list) using \LaTeX3 functionality.
+
+\item Each element of the list is processed individually using:
+\begin{lstlisting}[language=LaTeX]
+\clist_map_inline:nn {#1} { ... }
+\end{lstlisting}
+
+\item Each item is passed to \lstinline|\ba@split_keyval:n| for further decomposition.
+\end{itemize}
+
+\subsubsection*{3. Key–Value Separation: \texttt{\textbackslash ba\@split\_keyval:n}}
+
+This function receives a single entry of the form:
+
+\begin{center}
+\texttt{key=value}
+\end{center}
+
+It delegates parsing to a delimited argument function:
+
+\begin{lstlisting}[language=LaTeX]
+\ba@split_aux:w #1=\q_nil
+\end{lstlisting}
+
+Here, the pattern \lstinline|#1=\q_nil| forces TeX to split the argument at the first occurrence of the equal sign.
+
+\begin{itemize}
+\item \lstinline|#1| captures the key
+\item \lstinline|#2| captures the value
+\item \lstinline|\textbackslash q_nil| marks the end of the pattern safely
+\end{itemize}
+
+\subsubsection*{4. Storage Mechanism: \texttt{\textbackslash ba\@split\_aux:w}}
+
+This macro performs the actual storage step:
+
+\begin{itemize}
+\item It first checks whether the key is non-empty using:
+\begin{lstlisting}[language=LaTeX]
+\tl_if_blank:nF {#1}
+\end{lstlisting}
+
+\item If valid, it constructs a dynamic control sequence name using:
+\begin{lstlisting}[language=LaTeX]
+\csname ba@regiondata@\ba@currentregiondata @#1\endcsname
+\end{lstlisting}
+
+\item The value \lstinline|#2| is then globally assigned using:
+\begin{lstlisting}[language=LaTeX]
+\gdef
+\end{lstlisting}
+
+This ensures that the data persists outside local grouping scopes.
+\end{itemize}
+
+\subsubsection*{5. Dynamic Namespace Structure}
+
+The resulting storage scheme is:
+
+\begin{center}
+\begin{tabular}{ll}
+\textbf{Component} & \textbf{Meaning} \\
+\hline
+\lstinline|ba@regiondata| & root namespace \\
+\lstinline|\ba@currentregiondata| & region identifier \\
+\lstinline|key| & user-defined attribute name \\
+\end{tabular}
+\end{center}
+
+This yields fully dynamic access such as:
+
+\begin{lstlisting}[language=LaTeX]
+\csname ba@regiondata@Stable@southwest\endcsname
+\end{lstlisting}
+
+\subsubsection*{6. Design Advantages}
+
+This implementation provides several advantages:
+
+\begin{itemize}
+\item \textbf{Fully dynamic keys}: no predefined schema is required.
+\item \textbf{Efficient lookup}: direct macro expansion via \texttt{\textbackslash csname}.
+\item \textbf{Lightweight parsing}: avoids the overhead and fragility of \texttt{pgfkeys}.
+\item \textbf{Scoped namespace control}: region-specific grouping is naturally encoded.
+\end{itemize}
+
+\subsubsection*{7. Summary}
+
+This \LaTeX3-based approach implements a robust and scalable key–value system suitable for dynamically structured scientific visualizations such as bifurcation atlases. It combines efficient token list processing with low-level TeX macro construction to achieve both flexibility and performance without relying on external key–value frameworks.

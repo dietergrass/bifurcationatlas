@@ -14,6 +14,9 @@
 \RequirePackage{hyperref}
 \RequirePackage{newfloat}
 
+\newif\ifdebug
+%\debugfalse
+\debugtrue   % or \debugfalse
 % =========================================================
 % 0. DEFAULT PARAMETERS
 % =========================================================
@@ -40,14 +43,18 @@
 \newcounter{baRegion}[baAtlasID]
 \newcounter{baSubRegion}
 
-\newcount\ba@i
-\newcount\ba@j
 \renewcommand{\thebaAtlasID}{\arabic{baAtlasID}}
 \renewcommand{\thebaRegion}{\arabic{baAtlasID}.\baFormatCaptionLabel}
 \renewcommand{\thebaSubRegion}{\baFormatCaptionLabel}
 
-\newif\ifba@positional
-
+% -------------------------------------------------
+% REGION SYSTEM CORE (MUST BE EARLY)
+% -------------------------------------------------
+\tikzset{
+  ba/region/.code={
+    \gdef\ba@activeregion{#1}%
+  }
+}
 
 \DeclareFloatingEnvironment[
   fileext=loa,
@@ -60,7 +67,6 @@
 % =========================================================
 \newif\ifba@inatlas
 
-%\def\ba@tmp{}
 \def\ba@atlaslabel{}
 \let\ba@oldlabel\label
 
@@ -90,6 +96,7 @@
   \ba@inatlastrue
   \stepcounter{baAtlasID}
 
+  \def\ba@activeregion{}
   % reset counters
   \setcounter{baRegion}{0}
   \setcounter{baSubRegion}{0}
@@ -97,7 +104,6 @@
   % reset local storage
   \def\ba@regionlist{}
   \def\ba@colors{}
-  \def\ba@colornames{}
   \def\ba@caption{}
 
   % ------------------------------------------------------
@@ -135,24 +141,22 @@
 % =========================================================
 % PGFKEYS
 % =========================================================
+\pgfkeys{/ba/.is family}
+\pgfkeys{/ba/region/.is family, /ba/region}
 \pgfkeys{
-  /ba/.is family,
-  /ba,
-  region scale/.code   = {\renewcommand{\ba@region@scale}{#1}},
-  region radius/.code  = {\renewcommand{\ba@region@radius}{#1}},
-  caption style/.code  = {\renewcommand{\ba@caption@style}{#1}},
-  figure scale/.code   = {\renewcommand{\ba@figure@scale}{#1}},
-  caption shift/.code  = {\renewcommand{\ba@caption@shift}{#1}},
-  internal/region colors/.store in=\ba@colors,
-  internal/region colornames/.store in=\ba@colornames,
-  internal/region caption/.store in=\ba@caption,
-  caption label/.is choice,
+  /ba/regions scale/.code   = {\renewcommand{\ba@region@scale}{#1}},
+  /ba/regions radius/.code  = {\renewcommand{\ba@region@radius}{#1}},
+  /ba/caption style/.code  = {\renewcommand{\ba@caption@style}{#1}},
+  /ba/figure scale/.code   = {\renewcommand{\ba@figure@scale}{#1}},
+  /ba/caption shift/.code  = {\renewcommand{\ba@caption@shift}{#1}},
+  %/ba/internal/region colors/.store in=\ba@colors,
+  %/ba/internal/region caption/.store in=\ba@caption,
+  /ba/caption label/.is choice,
   /ba/caption label/alpha/.code  = {\def\ba@fmtcaption{\alph{baSubRegion}}},
   /ba/caption label/roman/.code  = {\def\ba@fmtcaption{\roman{baSubRegion}}},
   /ba/caption label/Roman/.code  = {\def\ba@fmtcaption{\Roman{baSubRegion}}},
   /ba/caption label/arabic/.code = {\def\ba@fmtcaption{\arabic{baSubRegion}}}
 }
-
 \newcommand{\baSetup}[1]{\pgfkeys{/ba,#1}}
 
 
@@ -161,96 +165,64 @@
 % =========================================================
 \NewDocumentCommand{\baDeclareRegion}{O{} m m}{%
   \baRequireAtlas
-  \ba@positionaltrue 
-  % store region name
-  \gappto\ba@regionlist{#2,}%
 
   % store caption
   \expandafter\gdef\csname ba@caption@#2\endcsname{#1}%
 
-  % -------------------------------------------------
-  % build index list (LOCAL SAFE VERSION)
-  % -------------------------------------------------
-	
-	\def\ba@indexlist{}%
-	\ba@i=0
-	
-	\@for\n:=#3\do{%
-	  \advance\ba@i by 1%
-	
-	  \ifx\ba@indexlist\empty
-	    \edef\ba@indexlist{\the\ba@i}%
-	  \else
-	    \edef\ba@indexlist{\ba@indexlist,\the\ba@i}%
-	  \fi
-	}
-  %\typeout{[DEBUG indexlist: ]\ba@indexlist}
-
-  % -------------------------------------------------
-  % store into pgf keys
-  % -------------------------------------------------
-  \tikzset{
-    ba/region/#2/.style={
-      /ba/internal/region colors={#3},
-      /ba/internal/region colornames={\ba@indexlist}
-    }
-  }%
-}
-
-\NewDocumentCommand{\baDeclareRegionData}{O{} m m}{%
-  \baRequireAtlas
-  \ba@positionalfalse 
-  % store region name
+  % store region list entry
   \gappto\ba@regionlist{#2,}%
 
-  % store caption
-  \expandafter\gdef\csname ba@caption@#2\endcsname{#1}%
-
-  % -------------------------------------------------
-  % parse semantic pairs: SL=LEqui, SR=HEqui
-  % -------------------------------------------------
-
-  \def\ba@colors{}%
-  \def\ba@colornames{}%
-
-  \@for\ba@pair:=#3\do{%
-
-    % split name = value
-    \expandafter\ba@splitpair\ba@pair\relax
-  }%
-	
-	%\typeout{TMPCOLORS DATA=[\ba@colors], REGION #2}%
-	%\typeout{TMPNAMES DATA=[\ba@colornames], REGION #2}%
-  % store into pgfkeys (optional continuation layer)
-  \tikzset{
-    ba/region/#2/.style/.expanded={
-      /ba/internal/region colors/.expanded={\ba@colors},
-      /ba/internal/region colornames/.expanded={\ba@colornames}
-    }
-  }%
+  % parse positional list
+  \ba@storepositional{#2}{#3}%
 }
-\def\ba@splitpair#1=#2\relax{%
-  % #1 = name (SL)
-  % #2 = color (LEqui)
-
-  % append color list
-  \ifx\ba@colors\empty
-    \edef\ba@colors{\ba@stripspaces{#2}}%
-  \else
-    \edef\ba@colors{\ba@colors,\ba@stripspaces{#2}}%
+\def\ba@storepositional#1#2{%
+  \def\ba@region{#1}%
+  \@tempcnta=0
+  \ifdebug 
+	  \typeout{[ba DEBUG] storing region=#1 list=#2}%
   \fi
 
-  % append name list
-  \ifx\ba@colornames\empty
-    \edef\ba@colornames{\ba@stripspaces{#1}}%
-  \else
-    \edef\ba@colornames{\ba@colornames,\ba@stripspaces{#1}}%
-  \fi
+  \@for\ba@item:=#2\do{%
+    \advance\@tempcnta by 1
+
+	\ifdebug
+    	\typeout{[ba DEBUG] pos \the\@tempcnta = \ba@item}%
+    \fi
+
+    \expandafter\gdef\csname ba@#1@__pos@\the\@tempcnta\endcsname{\ba@item}%
+
+    \ifdebug
+	    \typeout{[ba DEBUG] stored ->
+	      ba@#1@__pos@\the\@tempcnta = \csname ba@#1@__pos@\the\@tempcnta\endcsname
+	    }%
+    \fi
+  }%
 }
+%\def\ba@storepositional#1#2{%
+%  \def\ba@region{#1}%
+%  \@tempcnta=0
+%  \@for\ba@item:=#2\do{%
+%    \advance\@tempcnta by 1
+%    \expandafter\gdef\csname ba@#1@__pos@\the\@tempcnta\endcsname{\ba@item}%
+%  }%
+%}
 
+% =========================================================
+% REGION DATA DEFINITION
+% =========================================================
 
-\def\ba@stripspaces#1{%
-  \zap@space#1 \@empty
+\newcommand{\baDeclareRegionData}[2]{%
+  \gappto\ba@regionlist{#1,}%
+  \def\ba@region{#1}%
+  \@for\ba@item:=#2\do{%
+    \expandafter\ba@split\ba@item\relax
+  }%
+}
+\def\ba@split#1=#2\relax{%
+  \edef\key{\zap@space#1 \@empty}%
+  \edef\value{\zap@space#2 \@empty}%
+  \pgfkeys{/ba/region/\ba@region/\key/.initial=none}
+  \pgfkeys{/ba/region/\ba@region/\key=\value}%
 }
 
 % =========================================================
@@ -265,92 +237,73 @@
 % =========================================================
 % COLORS
 % =========================================================
-\newcommand{\ba@getcolor}[1]{%
-  \ifcsname ba@color@#1\endcsname
-    \csname ba@color@#1\endcsname
-  \else white\fi
-}
+%\newcommand{\ba@getcolor}[1]{%
+%  \ifcsname ba@c#1\endcsname
+%    \csname ba@c#1\endcsname
+%  \else white\fi
+%}
+%
+%\newcommand{\baGetColor}[1]{\ba@getcolor{#1}}
+%
+%\newcommand{\baPrepareColors}{%
+%  \let\colors\ba@colors%
+%  \foreach [count=\i] \c in \colors {%
+%    \expandafter\xdef\csname ba@c\i\endcsname{\c}%
+%  }%
+%}
 
-\newcommand{\baGetColor}[1]{\ba@getcolor{#1}}
-
-\newcommand{\baPrepareColors}{
-\ifba@positional
-	\baPrepareColorsPosition
-\else
-	\baPrepareColorsNames
-\fi
-}
-\newcommand{\baPrepareColorsPosition}{%
-  \let\ba@tmpcolors\ba@colors%
-  \let\ba@tmpnames\ba@colornames%
-
-  %\typeout{TMPCOLORS, baPrepareColorsPosition=[\ba@tmpcolors]}%
-  %\typeout{TMPNAMES, baPrepareColorsPosition=[\ba@colornames]}%
-
-  % counter for pairing colors <-> names
-  \ba@i=0
-  % -----------------------------------------
-  % iterate over colors (outer structure)
-  % -----------------------------------------
-	  
-	\edef\ba@tmp{\ba@tmpnames}%
-  
-  \@for\c:=\ba@tmpcolors\do{%
-    \advance\ba@i by 1%
-    \ba@j=1
-    \@for\n:=\ba@tmp\do{%
-      \ifnum\ba@j=\ba@i
-       %\typeout{[DEBUG POSITION]: ba@color@\n = \c}%
-        \expandafter\xdef\csname ba@color@\n\endcsname{\c}%
-      \fi
-      \advance\ba@j by 1%
-    }%
-  }%
-}
-
-\newcommand{\baPrepareColorsNames}{%
-  \let\ba@tmpcolors\ba@colors%
-  \let\ba@tmpnames\ba@colornames%
-  %\typeout{TMPCOLORS, PrepareColorsNames=[\ba@tmpcolors]}%
-  %\typeout{TMPNAMES, PrepareColorsNames=[\ba@colornames]}%
-
-  \ba@i=0%
-  \ba@j=0%
-
-  \edef\ba@tmpnamesflat{\ba@tmpnames}%
-
-  \@for\c:=\ba@tmpcolors\do{%
-    \advance\ba@i by 1%
-    \ba@j=0%
-
-    \@for\n:=\ba@tmpnamesflat\do{%
-      \advance\ba@j by 1%
-
-      \ifnum\ba@j=\ba@i
-      %\typeout{[DEBUG NAMES]: ba@color@\n = \c}%
-        \expandafter\xdef\csname ba@color@\n\endcsname{\c}%
-      \fi
-    }%
-  }%
-}
 % =========================================================
 % PIC SYSTEM
 % =========================================================
-\newcommand{\baNewPic}[2]{%
+%\newcommand{\baNewPic}[2]{%
+%  \tikzset{
+%    #1/.pic={\baPrepareColors #2}
+%  }%
+%}
+\NewDocumentCommand{\baNewPic}{O{} m +m}{%
+  %---------------------------------------
+  % Store schema (optional)
+  %---------------------------------------
+%  \if\relax\detokenize{#1}\relax
+%  \else
+%    \expandafter\gdef\csname ba@pickeys@#2\endcsname{#1}%
+%  \fi
+
+  %---------------------------------------
+  % Define pic (NO legacy system)
+  %---------------------------------------
   \tikzset{
-    #1/.pic={\baPrepareColors #2}
+    #2/.pic={%
+      % Ensure region is active (must be set by renderer)
+      % pic itself does NOT decide region
+
+      #3%
+    }
   }%
 }
-
 % =========================================================
 % RENDERING
 % =========================================================
 \newcommand{\baRenderRegion}[2]{%
-\scalebox{\ba@region@scale}{%
-\begin{tikzpicture}
-  \pic[ba/region/#2]{#1};
-\end{tikzpicture}}%
+  \begingroup
+  \def\ba@activeregion{#2}%
+  \expandafter\let\expandafter\ba@colors
+    \csname ba@region@colors@#2\endcsname
+  \scalebox{\ba@region@scale}{%
+    \begin{tikzpicture}
+      \pic{#1};
+    \end{tikzpicture}%
+  }%
+  \endgroup
 }
+%\newcommand{\baRenderRegion}[2]{%
+%  \def\ba@activeregion{#2}%
+%  \scalebox{\ba@region@scale}{%
+%    \begin{tikzpicture}
+%      \pic[ba/region/#2]{#1};
+%    \end{tikzpicture}%
+%  }%
+%}
 
 % =========================================================
 % LAYOUT
@@ -421,8 +374,7 @@
   % -----------------------------------------------------
   % background bifurcation diagram
   % -----------------------------------------------------
-  \node (bg) at (0,0)
-    {\includegraphics[scale=\ba@figure@scale]{#2}};
+  \node (bg) at (0,0){\includegraphics[scale=\ba@figure@scale]{#2}};
 
   % -----------------------------------------------------
   % optional caption below background figure
@@ -449,4 +401,59 @@
   \baRadialAtlas[\ba@offset]{#3}{#4}
 
 \end{tikzpicture}
+}
+
+
+
+
+% =========================================================
+% REGION DATA ACCESS
+% =========================================================
+\newcommand{\baResolveColor}[1]{%
+  % hardcoded test region
+%  \def\ba@region{R1}%
+%
+%  \ifcsname ba@R1@__pos@1\endcsname
+%    %\csname ba@R1@__pos@1\endcsname
+%    red
+%  \else
+%    blue%
+%  \fi
+  red
+}
+%\newcommand{\baResolveColor}[1]{%
+%  \begingroup
+%  % store input safely
+%  \edef\ba@tmp{#1}%
+%  %
+%  % -----------------------------------
+%  % symbolic lookup first
+%  % -----------------------------------
+%  \ifcsname ba@\ba@activeregion@__sym@\ba@tmp\endcsname
+%    \csname ba@\ba@activeregion@__sym@\ba@tmp\endcsname
+%  \else
+%    % -----------------------------------
+%    % fallback: positional lookup
+%    % -----------------------------------
+%    \ifcsname ba@\ba@activeregion@__pos@\ba@tmp\endcsname
+%      \csname ba@\ba@activeregion@__pos@\ba@tmp\endcsname
+%    \else
+%      none%
+%    \fi
+%  \fi
+%  \endgroup
+%}
+\newcommand{\baRegionProperty}[1]{%
+  \ifcsname ba@region@#1@\ba@activeregion\endcsname
+    \csname ba@region@#1@\ba@activeregion\endcsname
+  \else
+    \PackageWarning{bifurcationatlas}
+      {Region property '#1' undefined for region '\ba@activeregion'}%
+  \fi
+}
+
+\newcommand{\baStoreRegionProperty}[3]{%
+  \expandafter\gdef
+    \csname ba@region@#2@#1\endcsname
+    {#3}%
 }

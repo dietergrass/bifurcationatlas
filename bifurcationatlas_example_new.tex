@@ -28,15 +28,10 @@
 \definecolor{MEqui}{RGB}{0, 158, 115}  % teal
 \definecolor{LLEqui}{RGB}{204, 121, 167} % purple
 \definecolor{TEqui}{RGB}{213, 94, 0} % vermilion red-orange
-
 \definecolor{LEqui}{RGB}{204, 121, 167} % purple
 \definecolor{HEqui}{RGB}{213, 94, 0} % vermilion red-orange
 
-\definecolor{Stable}{RGB}{0,110,0}        % green!70!black
-\definecolor{Unstable}{RGB}{255,77,77}    % red!70
-\definecolor{Saddle}{RGB}{255,165,0}      % orange
-\definecolor{Focus}{RGB}{102,102,255}     % blue!60
-\definecolor{Periodic}{RGB}{26,26,255}    % blue!90% =========================================================
+% =========================================================
 % PIC TEMPLATE DEFINITION
 % =========================================================
 % This defines a reusable TikZ picture called "Test".
@@ -44,7 +39,7 @@
 % Key idea:
 % - This is a template, not a fixed drawing
 % - Colors are injected dynamically via region selection
-% - \baGetColor{1..4} selects region-dependent colors
+% - \baResolveColor{1..4} selects region-dependent colors
 %
 % Each region provides a different color configuration.
 % =========================================================
@@ -53,22 +48,22 @@
     % -----------------------------------------------------
     % Bottom-left tile (color index 1 of region)
     % -----------------------------------------------------
-    \fill[\baGetColor{1}] (0,0) rectangle (1,1);
+    \fill[\baResolveColor{1}] (0,0) rectangle (1,1);
 
     % -----------------------------------------------------
     % Bottom-right tile (color index 2)
     % -----------------------------------------------------
-    \fill[\baGetColor{2}] (1,0) rectangle (2,1);
+    \fill[\baResolveColor{2}] (1,0) rectangle (2,1);
 
     % -----------------------------------------------------
     % Top-left tile (color index 3)
     % -----------------------------------------------------
-    \fill[\baGetColor{3}] (0,1) rectangle (1,2);
+    \fill[\baResolveColor{3}] (0,1) rectangle (1,2);
 
     % -----------------------------------------------------
     % Top-right tile (color index 4)
     % -----------------------------------------------------
-    \fill[\baGetColor{4}] (1,1) rectangle (2,2);
+    \fill[\baResolveColor{4}] (1,1) rectangle (2,2);
 
     % -----------------------------------------------------
     % Structural grid overlay
@@ -92,22 +87,22 @@
     % ====================================================
 
     % bottom-left
-    \fill[\baGetColor{1}] (0,0) rectangle (1,1);
+    \fill[\baResolveColor{1}] (0,0) rectangle (1,1);
 
     % bottom-right
-    \fill[\baGetColor{2}] (1,0) rectangle (2,1);
+    \fill[\baResolveColor{2}] (1,0) rectangle (2,1);
 
     % top-left
-    \fill[\baGetColor{3}] (0,1) rectangle (1,2);
+    \fill[\baResolveColor{3}] (0,1) rectangle (1,2);
 
     % top-right
-    \fill[\baGetColor{4}] (1,1) rectangle (2,2);
+    \fill[\baResolveColor{4}] (1,1) rectangle (2,2);
 
     % ====================================================
     % SMALL SQUARE (overwrites bottom-left)
     % drawn LAST = highest priority
     % ====================================================
-    \fill[\baGetColor{5}] (0,0) rectangle (0.5,0.5);
+    \fill[\baResolveColor{5}] (0,0) rectangle (0.5,0.5);
     
     \draw[line width=2pt,black](0,2) -- (0,0) -- (2,0);
     \draw (0,1)--(2,1);
@@ -119,16 +114,18 @@
 }
 }
 
-\baNewPic{SimpleState}{{
+\baNewPic[SL,SR]{SimpleState}{{
   % =========================================
   % LEFT STATE (SL)
   % =========================================
-  \fill[\baGetColor{SL}] (0,0) rectangle (1,2);
+  %\texttt{\baResolveColor{SL}}
+  \fill[red] (0,0) rectangle (1,2);
 
   % =========================================
   % RIGHT STATE (SR)
   % =========================================
-  \fill[\baGetColor{SR}] (1,0) rectangle (2,2);
+  %\texttt{\baResolveColor{SR}}
+  \fill[blue] (1,0) rectangle (2,2);
 
   % =========================================
   % STRUCTURE LINES
@@ -139,47 +136,25 @@
 }
 }
 
-\baNewPic{RoundCartel}{
-{
-    % ============================================
-    % five circles using semantic color names
-    % ============================================
-
-    \fill[\baGetColor{NorthWest}] (-1, 1) circle (0.35);
-    \fill[\baGetColor{NorthEast}] ( 1, 1) circle (0.35);
-
-    \fill[\baGetColor{SouthWest}] (-1,-1) circle (0.35);
-    \fill[\baGetColor{SouthEast}] ( 1,-1) circle (0.35);
-
-    \fill[\baGetColor{Center}] (0,0) circle (0.45);
-
-    % labels
-    \node at (-1, 1) {\tiny NW};
-    \node at ( 1, 1) {\tiny NE};
-
-    \node at (-1,-1) {\tiny SW};
-    \node at ( 1,-1) {\tiny SE};
-
-    \node at (0,0) {\tiny C};
-
-    % outline
-    \draw[line width=1pt] (-1,1) circle (0.35);
-    \draw[line width=1pt] ( 1,1) circle (0.35);
-
-    \draw[line width=1pt] (-1,-1) circle (0.35);
-    \draw[line width=1pt] ( 1,-1) circle (0.35);
-
-    \draw[line width=1pt] (0,0) circle (0.45);
-}
-}
 \begin{document}
 \baSetup{
-  region scale = 1.25,
-  region radius = 6.75,
+  regions radius = 1.25,
+  regions radius = 6.75,
   caption style = \footnotesize,
   figure scale = 0.35,
   caption label = alpha
 }
+%\begin{bifurcationatlas}
+%\label{ba:test4}
+%\baDeclareRegionData{R1}{SL=LEqui,SR=HEqui}
+%%\baDeclareRegionData{R2}{SL=HEqui,SR=HEqui}
+%%\baDeclareRegionData{R3}{SL=LEqui,SR=LEqui}
+%\baDeclareRegion[Region 1]{R1}{LLEqui,HLEqui,HHEqui,HHEqui}
+%
+%%\baRenderRegion{SimpleState}{R1}
+%\baRenderRegion{Test}{R1}
+%%\baAtlasFigure[Bifurcation Diagram]{bifurcation}{R1,R2,R3}{SimpleState}
+%\end{bifurcationatlas}
 
 \begin{bifurcationatlas}
 \label{ba:test1}
@@ -282,92 +257,4 @@ As shown in Fig.~\ref{ba:test2.1},\ref{ba:test2.7} the system is stable.
 \end{bifurcationatlas}
 As shown in Fig.~\ref{ba:test3.3},\ref{ba:test3.1} the system is stable. As shown in Region~\basubref{ba:test3.2},\basubref{ba:test3.7}, the system is stable.
 
-\begin{bifurcationatlas}
-\label{ba:test4}
-\baDeclareRegionData[Region 1]{R1}{SL=LEqui,SR=HEqui}
-\baDeclareRegionData[Region 2]{R2}{SL=HEqui,SR=HEqui}
-\baDeclareRegionData[Region 3]{R3}{SL=LEqui,SR=LEqui}
-%\baDeclareRegion[Region 1]{R1}{LLEqui,HLEqui,HHEqui,HHEqui}
-
-%\baRenderRegion{SimpleState}{R1}
-%\baRenderRegion{Test}{R1}
-\baAtlasFigure[Bifurcation Diagram]{bifurcation}{R1,R2,R3}{SimpleState}
-\end{bifurcationatlas}
-
-\begin{bifurcationatlas}[region scale = 0.8, region radius = 5,figure scale = 0.225
-]
-\label{ba:carteltest}
-\centering
-
-\baDeclareRegionData[Region 1]{R1}{
-    NorthWest=Stable,
-    NorthEast=Stable,
-    SouthWest=Stable,
-    SouthEast=Stable,
-    Center=Stable
-}
-
-\baDeclareRegionData[Region 2]{R2}{
-    NorthWest=Stable,
-    NorthEast=Unstable,
-    SouthWest=Stable,
-    SouthEast=Stable,
-    Center=Stable
-}
-
-\baDeclareRegionData[Region 3]{R3}{
-    NorthWest=Stable,
-    NorthEast=Unstable,
-    SouthWest=Saddle,
-    SouthEast=Stable,
-    Center=Stable
-}
-
-\baDeclareRegionData[Region 4]{R4}{
-    NorthWest=Stable,
-    NorthEast=Unstable,
-    SouthWest=Saddle,
-    SouthEast=Focus,
-    Center=Stable
-}
-
-\baDeclareRegionData[Region 5]{R5}{
-    NorthWest=Stable,
-    NorthEast=Unstable,
-    SouthWest=Saddle,
-    SouthEast=Focus,
-    Center=Periodic
-}
-
-\baDeclareRegionData[Region 6]{R6}{
-    NorthWest=Periodic,
-    NorthEast=Unstable,
-    SouthWest=Saddle,
-    SouthEast=Focus,
-    Center=Stable
-}
-
-\baDeclareRegionData[Region 7]{R7}{
-    NorthWest=Periodic,
-    NorthEast=Periodic,
-    SouthWest=Saddle,
-    SouthEast=Focus,
-    Center=Stable
-}
-
-\baDeclareRegionData[Region 8]{R8}{
-    NorthWest=Periodic,
-    NorthEast=Periodic,
-    SouthWest=Periodic,
-    SouthEast=Focus,
-    Center=Stable
-}
-
-\baAtlasFigure[Test Diagram]{bifurcation}
-  {R1,R2,R3,R4,R5,R6,R7,R8}
-  {RoundCartel}
-
-\caption{Name-based region test using semantic color mappings.}
-
-\end{bifurcationatlas}
 \end{document}
