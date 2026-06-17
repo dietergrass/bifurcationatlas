@@ -55,13 +55,16 @@
   name=Bifurcation Atlas,
   placement=htbp
 ]{bifurcationatlasfloat}
+
 % =========================================================
 % ATLAS STATE
 % =========================================================
 \newif\ifba@inatlas
+\newif\ifba@userlabel
 
-%\def\ba@tmp{}
-\def\ba@atlaslabel{}
+\def\ba@atlaslabel{} % user label (optional alias only)
+\def\ba@atlasbase{}  % <<< NEW: immutable internal ID
+
 \let\ba@oldlabel\label
 
 \newcommand{\baRequireAtlas}{%
@@ -74,21 +77,18 @@
 
 \NewDocumentEnvironment{bifurcationatlas}{O{}}
 {%
-  % ======================================================
-  % LOCAL SCOPE (replaces hooks completely)
-  % ======================================================
   \begingroup
 
-  % ------------------------------------------------------
-  % optional user settings
-  % ------------------------------------------------------
   \pgfkeys{/ba,#1}
 
-  % ------------------------------------------------------
   % activate atlas
-  % ------------------------------------------------------
   \ba@inatlastrue
   \stepcounter{baAtlasID}
+
+  % ------------------------------------------------------
+  % FIX 1: IMMUTABLE ATLAS BASE (core correction)
+  % ------------------------------------------------------
+  \edef\ba@atlasbase{ba@\thebaAtlasID}%
 
   % reset counters
   \setcounter{baRegion}{0}
@@ -99,34 +99,29 @@
   \def\ba@colors{}
   \def\ba@colornames{}
   \def\ba@caption{}
+	\ifx\ba@atlaslabel\@empty
+	  \edef\ba@atlasbase{ba@\thebaAtlasID}%
+	\else
+	  \edef\ba@atlasbase{\ba@atlaslabel}%
+	\fi
+  % ------------------------------------------------------
+  % LABEL INITIALIZATION
+  % ------------------------------------------------------
+  \ba@userlabelfalse
+  \let\ba@atlaslabel\empty
 
-  % ------------------------------------------------------
-  % LABEL CAPTURE (local, safe, no global patching)
-  % ------------------------------------------------------
+  % capture label safely
   \let\ba@oldlabel\label
-  \gdef\ba@atlaslabel{}
-
   \renewcommand{\label}[1]{%
-    \ifx\ba@atlaslabel\@empty
-      \gdef\ba@atlaslabel{##1}%
-    \fi
+    \edef\ba@atlaslabel{##1}%
     \ba@oldlabel{##1}%
   }%
 
-  % ------------------------------------------------------
-  % OPEN FLOAT (core content container)
-  % ------------------------------------------------------
   \begin{bifurcationatlasfloat}
 }
 {%
-  % ------------------------------------------------------
-  % CLOSE FLOAT
-  % ------------------------------------------------------
   \end{bifurcationatlasfloat}
 
-  % ------------------------------------------------------
-  % CLEANUP (automatic via group)
-  % ------------------------------------------------------
   \ba@inatlasfalse
   \let\label\ba@oldlabel
 
@@ -380,13 +375,23 @@
   % render regions
   \foreach \r [count=\i] in {#2}{%
 
-	\refstepcounter{baSubRegion}
-	\refstepcounter{baRegion}
-	\label{\ba@atlaslabel.\arabic{baRegion}}
-	\protected@write\@auxout{}{%
-	  \string\newlabel{sub@\ba@atlaslabel.\arabic{baRegion}}%
-	  {{\thebaSubRegion}{\thepage}}%
-	}
+    \refstepcounter{baSubRegion}
+    \refstepcounter{baRegion}
+
+    % --------------------------------------------------
+    % FIX: IMMUTABLE LABEL CONSTRUCTION
+    % --------------------------------------------------
+    \edef\ba@tmp@label{%
+      \ba@atlasbase.\arabic{baRegion}%
+    }%
+
+    \label{\ba@tmp@label}%
+
+    \protected@write\@auxout{}{%
+      \string\newlabel{sub@\ba@tmp@label}%
+      {{\thebaSubRegion}{\thepage}}%
+    }%
+
     \edef\baTmpCaption{\baGetRegionCaption{\r}}
 
     \baPlaceRadialNode{\i}{\baLastIndex}{%
@@ -402,7 +407,6 @@
     }%
   }%
 }
-
 
 % =========================================================
 % 10. ATLAS FIGURE (HIGH-LEVEL USER COMMAND)
@@ -431,13 +435,22 @@
     \def\ba@offset{0}
   \else
     \def\ba@offset{1}
-	\refstepcounter{baSubRegion}
-	\refstepcounter{baRegion}
-	\label{\ba@atlaslabel.\arabic{baRegion}}
-	\protected@write\@auxout{}{%
-	  \string\newlabel{sub@\ba@atlaslabel.\arabic{baRegion}}%
-	  {{\thebaSubRegion}{\thepage}}%
-	}
+
+    \refstepcounter{baSubRegion}
+    \refstepcounter{baRegion}
+
+    % FIX: immutable label base
+    \edef\ba@tmp@label{%
+      \ba@atlasbase.\arabic{baRegion}%
+    }%
+
+    \label{\ba@tmp@label}%
+
+    \protected@write\@auxout{}{%
+      \string\newlabel{sub@\ba@tmp@label}%
+      {{\thebaSubRegion}{\thepage}}%
+    }%
+
     \node[anchor=north]
       at ([yshift=-\ba@caption@shift]bg.south)
       {\ba@caption@style (\baFormatCaptionLabel)~#1};
