@@ -1,598 +1,140 @@
 \documentclass{article}
 
 % =========================================================
-% PACKAGE LOADING
+% (1) CORE PACKAGES
 % =========================================================
-% Load the bifurcation atlas package which defines:
-% - \baNewPic
-% - \baDeclareRegion
-% - \baAtlasFigure
-% - configuration system (\baSetup)
+% bifurcationatlas:
+%   Provides:
+%   - \baPic
+%   - \baNewRegion
+%   - \baNewRegionData
+%   - \baAtlasFigure
+%   - \baRadialAtlas
+%   - \baSetup
+%
+% graphicx:
+%   External image inclusion (bifurcation diagrams etc.)
 % =========================================================
 \usepackage{bifurcationatlas}
-
+\usepackage{caption}
+\usepackage{subcaption}
 \usepackage{graphicx}
 
-% Optional directory for external figures (e.g. PDF diagrams)
 \graphicspath{{./fig/}}
 
 % =========================================================
-% GLOBAL COLOR DEFINITIONS
+% (2) GLOBAL COLOR DEFINITIONS
 % =========================================================
-% These are standard LaTeX colors used indirectly in region definitions.
-% They are NOT accessed directly in TikZ pics, but referenced via:
-%   \baDeclareRegion{...}{color1,color2,...}
+% Semantic color system:
+% - Equilibria types (HHEqui, LLEqui, etc.)
+% - Stability classes (Stable, Unstable, etc.)
+% - Semantic rendering palette (colorForO, etc.)
 % =========================================================
-\definecolor{HHEqui}{RGB}{0, 114, 178} % blue
-\definecolor{HLEqui}{RGB}{230, 159, 0} % orange
-\definecolor{MEqui}{RGB}{0, 158, 115}  % teal
-\definecolor{LLEqui}{RGB}{204, 121, 167} % purple
-\definecolor{TEqui}{RGB}{213, 94, 0} % vermilion red-orange
 
-\definecolor{LEqui}{RGB}{204, 121, 167} % purple
-\definecolor{HEqui}{RGB}{213, 94, 0} % vermilion red-orange
 
-\definecolor{Stable}{RGB}{0,110,0}        % green!70!black
-\definecolor{Unstable}{RGB}{255,77,77}    % red!70
-\definecolor{Saddle}{RGB}{255,165,0}      % orange
-\definecolor{Focus}{RGB}{102,102,255}     % blue!60
-\definecolor{Periodic}{RGB}{26,26,255}    % blue!90%
+% --- stability palette ---
+\definecolor{Stable}{RGB}{0,110,0}
+\definecolor{Unstable}{RGB}{255,77,77}
+\definecolor{Saddle}{RGB}{255,165,0}
+\definecolor{Focus}{RGB}{102,102,255}
+\definecolor{Periodic}{RGB}{26,26,255}
 
-\definecolor{colorForO}{RGB}{0, 128, 128}
-\definecolor{colorForF}{RGB}{255,165,0}   % F → orange
-\definecolor{colorForS}{RGB}{255,105,180}   % S → yellow
-\definecolor{colorForM}{RGB}{107, 142, 35}     % M → dark green
-\definecolor{colorForC}{RGB}{255, 0, 0}     % M → dark green
+% --- semantic mapping palette ---
+\definecolor{colorForO}{RGB}{0,128,128}
+\definecolor{colorForF}{RGB}{255,165,0}
+\definecolor{colorForS}{RGB}{255,105,180}
+\definecolor{colorForM}{RGB}{107,142,35}
+\definecolor{colorForC}{RGB}{255,0,0}
+
+\definecolor{HHEqui}{RGB}{0, 114, 178}
+\definecolor{HLEqui}{RGB}{230, 159, 0}
+\definecolor{MEqui}{RGB}{0, 158, 115}
+\definecolor{LLEqui}{RGB}{204, 121, 167}
+\definecolor{TEqui}{RGB}{213, 94, 0}
+
+\definecolor{LEqui}{RGB}{204, 121, 167}
+\definecolor{HEqui}{RGB}{213, 94, 0}
 
 % =========================================================
-% PIC TEMPLATE DEFINITION
+% (3) TIKZ TEMPLATE SYSTEM (PIC DEFINITIONS)
 % =========================================================
-% This defines a reusable TikZ picture called "Test".
-%
-% Key idea:
-% - This is a template, not a fixed drawing
-% - Colors are injected dynamically via region selection
-% - \baGetColor{1..4} selects region-dependent colors
-%
-% Each region provides a different color configuration.
+% Each \baPic defines a reusable geometric template.
+% Color injection is done via \baGetColor{index}.
 % =========================================================
-\baNewPic{Test}{
-	
-    % -----------------------------------------------------
-    % Bottom-left tile (color index 1 of region)
-    % -----------------------------------------------------
-    \fill[\baGetColor{1}] (0,0) rectangle (1,1);
 
-    % -----------------------------------------------------
-    % Bottom-right tile (color index 2)
-    % -----------------------------------------------------
-    \fill[\baGetColor{2}] (1,0) rectangle (2,1);
+\initAtlas{Cartel}{LL,HL,M,HH,C}{
+  \fill[\baColor{LL}] (0,0) rectangle (1,1);
+  \fill[\baColor{HL}] (1,0) rectangle (2,1);
+  \fill[\baColor{M}] (0,1) rectangle (1,2);
+  \fill[\baColor{HH}] (1,1) rectangle (2,2);
 
-    % -----------------------------------------------------
-    % Top-left tile (color index 3)
-    % -----------------------------------------------------
-    \fill[\baGetColor{3}] (0,1) rectangle (1,2);
+  % refinement layer (highest priority)
+  \fill[\baColor{C}] (0,0) rectangle (0.5,0.5);
 
-    % -----------------------------------------------------
-    % Top-right tile (color index 4)
-    % -----------------------------------------------------
-    \fill[\baGetColor{4}] (1,1) rectangle (2,2);
-
-    % -----------------------------------------------------
-    % Structural grid overlay
-    % -----------------------------------------------------
-    \draw[line width=2pt,black] (0,2) -- (0,0) -- (2,0);
-    \draw (0,1) -- (2,1);
-    \draw (1,0) -- (1,2);
-
-    % -----------------------------------------------------
-    % Optional reference axis highlight
-    % -----------------------------------------------------
-    \draw[line width=2pt,red] (0,0.04) -- (0,2);
+  \draw[line width=2pt,black] (0,2)--(0,0)--(2,0);
+  \draw (0,1)--(2,1);
+  \draw (1,0)--(1,2);
+  \draw (0,0.5)--(0.5,0.5);
+  \draw (0.5,0)--(0.5,0.5);
+  \draw[line width=2pt,red] (0,0.04)--(0,2);
 }
-\baNewPic{Cartel}{
-{
-
-
-    % ====================================================
-    % 4 LARGE SQUARES (base layer)
-    % each is 1x1
-    % ====================================================
-
-    % bottom-left
-    \fill[\baGetColor{1}] (0,0) rectangle (1,1);
-
-    % bottom-right
-    \fill[\baGetColor{2}] (1,0) rectangle (2,1);
-
-    % top-left
-    \fill[\baGetColor{3}] (0,1) rectangle (1,2);
-
-    % top-right
-    \fill[\baGetColor{4}] (1,1) rectangle (2,2);
-
-    % ====================================================
-    % SMALL SQUARE (overwrites bottom-left)
-    % drawn LAST = highest priority
-    % ====================================================
-    \fill[\baGetColor{5}] (0,0) rectangle (0.5,0.5);
-    
-    \draw[line width=2pt,black](0,2) -- (0,0) -- (2,0);
-    \draw (0,1)--(2,1);
-    \draw (1,0)--(1,2);
-    \draw (0,0.5)--(0.5,0.5);
-    \draw (0.5,0)--(0.5,0.5);
-    \draw[line width=2pt,red] (0,0.04)--(0,2);
-    
-}
+% ---------------------------------------------------------
+% TEMPLATE: SimpleState (2-region system)
+% ---------------------------------------------------------
+\initAtlas{SimpleState}{SL,SR}{
+  \fill[\baColor{SL}] (0,0) rectangle (1,2);
+  \fill[\baColor{SR}] (1,0) rectangle (2,2);
 }
 
-\baNewPic{SimpleState}{{
-  % =========================================
-  % LEFT STATE (SL)
-  % =========================================
-  \fill[\baGetColor{SL}] (0,0) rectangle (1,2);
 
-  % =========================================
-  % RIGHT STATE (SR)
-  % =========================================
-  \fill[\baGetColor{SR}] (1,0) rectangle (2,2);
-
-  % =========================================
-  % STRUCTURE LINES
-  % =========================================
-  %\draw[line width=2pt,black] (0,2) -- (0,0) -- (2,0);
-  %\draw (0,1) -- (2,1);
-  %\draw (1,0) -- (1,2);
-}
-}
-\baNewPic{MoM}{
-    % =====================================================
-    % TRI-MID
-    % =====================================================
-    \fill[\baGetColor{midcolor}]
-      (1.5,1.5)--(1,2)--(2,2)--cycle;
-
-    % =====================================================
-    % TRI-LEFT
-    % =====================================================
-    \fill[\baGetColor{leftcolor}]
-      (1,2)--(0,3)--(1,3)--cycle;
-
-    % =====================================================
-    % TRI-RIGHT
-    % =====================================================
-    \fill[\baGetColor{rightcolor}]
-      (2,3)--(3,3)--(2,2)--cycle;
-
-    % =====================================================
-    % SQUARE
-    % =====================================================
-    \fill[\baGetColor{squarecolor}]
-      (1,2)--(1,3)--(2,3)--(2,2)--cycle;
-    
-    \fill[\baGetColor{centercolor}] (1.5,1.5) circle (0.25);
-      
-    \draw (1,0)--(1,3);
-    \draw (2,0)--(2,3);
-    \draw (0,1)--(3,1);
-    \draw (0,2)--(3,2);
-    \draw[thick] (0,0)--(3,3);
- 	\draw[thick] (0,3)--(3,0);  
-}
-\baNewPic{RoundCartel}{
-{
-    % ============================================
-    % five circles using semantic color names
-    % ============================================
-
-    \fill[\baGetColor{NorthWest}] (-1, 1) circle (0.35);
-    \fill[\baGetColor{NorthEast}] ( 1, 1) circle (0.35);
-
-    \fill[\baGetColor{SouthWest}] (-1,-1) circle (0.35);
-    \fill[\baGetColor{SouthEast}] ( 1,-1) circle (0.35);
-
-    \fill[\baGetColor{Center}] (0,0) circle (0.45);
-
-    % labels
-    \node at (-1, 1) {\tiny NW};
-    \node at ( 1, 1) {\tiny NE};
-
-    \node at (-1,-1) {\tiny SW};
-    \node at ( 1,-1) {\tiny SE};
-
-    \node at (0,0) {\tiny C};
-
-    % outline
-    \draw[line width=1pt] (-1,1) circle (0.35);
-    \draw[line width=1pt] ( 1,1) circle (0.35);
-
-    \draw[line width=1pt] (-1,-1) circle (0.35);
-    \draw[line width=1pt] ( 1,-1) circle (0.35);
-
-    \draw[line width=1pt] (0,0) circle (0.45);
-}
-}
+% =========================================================
+% (4) DOCUMENT SETUP
+% =========================================================
 \begin{document}
 \baSetup{
   region scale = 1.25,
   region radius = 6.75,
-  caption style = \footnotesize,
   figure scale = 0.35,
-  caption label = alpha
+  debug=true,
 }
 
-\begin{bifurcationatlas}
-\centering
 % =========================================================
-% ATLAS RENDERING
+% (5) ATLAS BLOCK: STANDARD TEMPLATE EXAMPLE
 % =========================================================
-% \baAtlasFigure combines:
-%   (1) background bifurcation diagram (PDF)
-%   (2) radial layout of region renderings
-%   (3) region-specific pic template ("Test")
+\begin{bifurcationatlas}[region scale = 1.5]
+\label{ba:simplestate}
+\setAtlas{SimpleState}
+
+\baNewRegion[caption={Region 1},label={ba:R1}]{R1}{SL=Unstable,SR=Periodic}
+\baNewRegion[caption={Region 2},label={ba:R2}]{R2}{SL=Stable,SR=Unstable}
+\baNewRegion[caption={Region 3},label={ba:R3}]{R3}{SL=Stable,SR=Focus}
+
+\baAtlasFigure[caption={Cartel Diagram},label=ba:center]{Center_Corridor_Region}{R1,R2,R3}
+\end{bifurcationatlas}
+\begin{bifurcationatlas}[caption label=roman]
+\label{ba:simplestate2}
+\setAtlas{SimpleState}
+
+\baNewRegion[caption={Region A},label={ba2:R1}]{R1}{SL=Stable,SR=Focus}
+\baNewRegion[caption={Region B},label={ba2:R2}]{R2}{SL=Unstable,SR=Unstable}
+\baNewRegion[caption={Region C},label={ba2:R3}]{R3}{SL=Periodic,SR=Focus}
+
+\baAtlasFigure[caption={Cartel Diagram Second},label=ba2:center]{Center_Corridor_Region}{R1,R2,R3}
+\end{bifurcationatlas}
+\begin{bifurcationatlas}[caption label=Roman]
+\label{ba:cartel}
+\setAtlas{Cartel}
 %
-% Arguments:
-%   1: background image
-%   2: list of regions
-%   3: pic template name
-% =========================================================
-\baDeclareRegion[Region 1]{R1}{LLEqui,HLEqui,HHEqui,HHEqui}
-\baDeclareRegion[Region 2]{R2}{LLEqui,HLEqui,HHEqui,MEqui}
-\baDeclareRegion[Region 3]{R3}{LLEqui,HLEqui,MEqui,MEqui}
-\baDeclareRegion[Region 4]{R4}{LLEqui,HLEqui,HLEqui,HLEqui}
-\baDeclareRegion[Region 5]{R5}{LLEqui,LLEqui,LLEqui,HLEqui}
-\baDeclareRegion[Region 6]{R6}{LLEqui,HLEqui,HHEqui,HLEqui}
-\baDeclareRegion[Region 7]{R7}{LLEqui,HHEqui,HHEqui,HHEqui}
-
-\baAtlasFigure[Bifurcation Diagram]{bifurcation}{R1,R2,R3,R4,R5,R6,R7}{Test}
-
-\caption{Structured bifurcation atlas}
-
+\baNewRegion[caption={Cartel Region 1},label={ba:cartel_R1}]{R1}{LL=LLEqui,HL=HLEqui,M=HHEqui,HH=HHEqui,C=TEqui}
+\baNewRegion[caption={Cartel Region 2},label={ba:cartel_R2}]{R2}{LL=LLEqui,HL=HLEqui,M=MEqui,HH=HHEqui,C=TEqui}
+\baNewRegion[caption={Cartel Region 3},label={ba:cartel_R3}]{R3}{LL=LLEqui,HL=HLEqui,M=MEqui,HH=MEqui,C=TEqui}
+\baNewRegion[caption={Cartel Region 4},label={ba:cartel_R4}]{R4}{LL=LLEqui,HL=HLEqui,M=HLEqui,HH=HLEqui,C=HLEqui}
+\baNewRegion[caption={Cartel Region 5},label={ba:cartel_R5}]{R5}{LL=LLEqui,HL=LLEqui,M=LLEqui,HH=TEqui,C=TEqui}
+\baNewRegion[caption={Cartel Region 6},label={ba:cartel_R6}]{R6}{LL=LLEqui,HL=LLEqui,M=TEqui,HH=TEqui,C=HLEqui}
+\baAtlasFigure[caption={Cartel Bifurcation Diagram (roman)},label={ba:cartel_center}]{bifurcation}{R1,R2,R3,R4,R5,R6}
 \end{bifurcationatlas}
-
+panel~\basubref{ba2:R3}, ~\basubref{ba:center}, Figure~\ref{ba:simplestate2} panel\ref{ba2:center}, Figure~\ref{ba:cartel} panel\ref{ba:cartel_R2}
 % =========================================================
-% CROSS-REFERENCE EXAMPLE
+% END DOCUMENT
 % =========================================================
-% Each region can be referenced via:
-%   \label{ba:R1}, \label{ba:R2}, ...
-% =========================================================
-As shown in Region~\basubref{ba@1.1},\basubref{ba@1.6}, the system is stable.
-As shown in Fig~\ref{ba@1.1},\ref{ba@1.2},\ref{ba@1.8}, the system is stable.
-
-
-\begin{bifurcationatlas}[caption label = roman]
-\centering
-% =========================================================
-% ATLAS RENDERING
-% =========================================================
-% \baAtlasFigure combines:
-%   (1) background bifurcation diagram (PDF)
-%   (2) radial layout of region renderings
-%   (3) region-specific pic template ("Test")
-%
-% Arguments:
-%   1: background image
-%   2: list of regions
-%   3: pic template name
-% =========================================================
-\baDeclareRegion[Cartel Region 1]{R1}{LLEqui,HLEqui,HHEqui,HHEqui,TEqui}
-\baDeclareRegion[Cartel Region 2]{R2}{LLEqui,HLEqui,HHEqui,MEqui,TEqui}
-\baDeclareRegion[Cartel Region 3]{R3}{LLEqui,HLEqui,MEqui,MEqui,MEqui}
-\baDeclareRegion[Cartel Region 4]{R4}{LLEqui,HLEqui,HLEqui,HLEqui,HLEqui}
-\baDeclareRegion[Cartel Region 5]{R5}{LLEqui,LLEqui,LLEqui,TEqui,TEqui}
-\baDeclareRegion[Cartel Region 6]{R6}{LLEqui,HLEqui,TEqui,TEqui,HLEqui}
-
-\baAtlasFigure[Cartel Bifurcation Diagram]{bifurcation}{R1,R2,R3,R4,R5,R6}{Cartel}
-
-\caption{Structured cartel bifurcation atlas}
-
-\end{bifurcationatlas}
-As shown in Fig.~\ref{ba@2.1},\ref{ba@2.7} the system is stable.
-
-\begin{bifurcationatlas}
-\centering
-% =========================================================
-% ATLAS RENDERING
-% =========================================================
-% \baAtlasFigure combines:
-%   (1) background bifurcation diagram (PDF)
-%   (2) radial layout of region renderings
-%   (3) region-specific pic template ("Test")
-%
-% Arguments:
-%   1: background image
-%   2: list of regions
-%   3: pic template name
-% =========================================================
-\baDeclareRegion[Region 1]{R1}{LLEqui,HLEqui,HHEqui,HHEqui}
-\baDeclareRegion[Region 2]{R2}{LLEqui,HLEqui,HHEqui,MEqui}
-\baDeclareRegion[Region 3]{R3}{LLEqui,HLEqui,MEqui,MEqui}
-\baDeclareRegion[Region 4]{R4}{LLEqui,HLEqui,HLEqui,HLEqui}
-\baDeclareRegion[Region 5]{R5}{LLEqui,LLEqui,LLEqui,HLEqui}
-\baDeclareRegion[Region 6]{R6}{LLEqui,HLEqui,HHEqui,HLEqui}
-\baDeclareRegion[Region 7]{R7}{LLEqui,HHEqui,HHEqui,HHEqui}
-
-\baAtlasFigure[Bifurcation Diagram]{bifurcation}{R1,R2,R3,R4,R5,R6,R7}{Test}
-
-\caption{Structured bifurcation atlas the second}
-
-\end{bifurcationatlas}
-As shown in Fig.~\ref{ba@3.3},\ref{ba@3.1} the system is stable. As shown in Region~\basubref{ba@3.2},\basubref{ba@3.7}, the system is stable.
-
-\begin{bifurcationatlas}
-\baDeclareRegionData[Region 1]{R1}{SL=LEqui,SR=HEqui}
-\baDeclareRegionData[Region 2]{R2}{SL=HEqui,SR=HEqui}
-\baDeclareRegionData[Region 3]{R3}{SL=LEqui,SR=LEqui}
-%\baDeclareRegion[Region 1]{R1}{LLEqui,HLEqui,HHEqui,HHEqui}
-
-%\baRenderRegion{SimpleState}{R1}
-%\baRenderRegion{Test}{R1}
-\baAtlasFigure[Bifurcation Diagram]{bifurcation}{R1,R2,R3}{SimpleState}
-\end{bifurcationatlas}
-
-\begin{bifurcationatlas}[region scale = 0.8, region radius = 5,figure scale = 0.225
-]
-%\label{ba:carteltest}
-\centering
-
-\baDeclareRegionData[Region 1]{R1}{
-    NorthWest=Stable,
-    NorthEast=Stable,
-    SouthWest=Stable,
-    SouthEast=Stable,
-    Center=Stable
-}
-
-\baDeclareRegionData[Region 2]{R2}{
-    NorthWest=Stable,
-    NorthEast=Unstable,
-    SouthWest=Stable,
-    SouthEast=Stable,
-    Center=Stable
-}
-
-\baDeclareRegionData[Region 3]{R3}{
-    NorthWest=Stable,
-    NorthEast=Unstable,
-    SouthWest=Saddle,
-    SouthEast=Stable,
-    Center=Stable
-}
-
-\baDeclareRegionData[Region 4]{R4}{
-    NorthWest=Stable,
-    NorthEast=Unstable,
-    SouthWest=Saddle,
-    SouthEast=Focus,
-    Center=Stable
-}
-
-\baDeclareRegionData[Region 5]{R5}{
-    NorthWest=Stable,
-    NorthEast=Unstable,
-    SouthWest=Saddle,
-    SouthEast=Focus,
-    Center=Periodic
-}
-
-\baDeclareRegionData[Region 6]{R6}{
-    NorthWest=Periodic,
-    NorthEast=Unstable,
-    SouthWest=Saddle,
-    SouthEast=Focus,
-    Center=Stable
-}
-
-\baDeclareRegionData[Region 7]{R7}{
-    NorthWest=Periodic,
-    NorthEast=Periodic,
-    SouthWest=Saddle,
-    SouthEast=Focus,
-    Center=Stable
-}
-
-\baDeclareRegionData[Region 8]{R8}{
-    NorthWest=Periodic,
-    NorthEast=Periodic,
-    SouthWest=Periodic,
-    SouthEast=Focus,
-    Center=Stable
-}
-
-\baAtlasFigure[Test Diagram]{bifurcation}
-  {R1,R2,R3,R4,R5,R6,R7,R8}
-  {RoundCartel}
-
-\caption{Name-based region test using semantic color mappings.}
-
-\end{bifurcationatlas}
-\begin{bifurcationatlas}[region scale = 0.4, region radius = 5,figure scale = 0.25]
-% =========================================================
-% REGION 1
-% =========================================================
-\baDeclareRegionData[Region 1]{R1}{
-  midcolor=colorForO,
-  leftcolor=colorForO,
-  squarecolor=colorForO,
-  rightcolor=colorForO,
-  centercolor=colorForO
-}
-
-% =========================================================
-% REGION 2
-% =========================================================
-\baDeclareRegionData[Region 2]{R2}{
-  midcolor=colorForO,
-  leftcolor=colorForF,
-  squarecolor=colorForO,
-  rightcolor=colorForO,
-  centercolor=colorForO
-}
-
-% =========================================================
-% REGION 3
-% =========================================================
-\baDeclareRegionData[Region 3]{R3}{
-  midcolor=colorForO,
-  leftcolor=colorForF,
-  squarecolor=colorForM,
-  rightcolor=colorForM,
-  centercolor=colorForO
-}
-
-\baDeclareRegionData[Region 3c]{R3c}{
-  midcolor=colorForO,
-  leftcolor=colorForF,
-  squarecolor=colorForM,
-  rightcolor=colorForO,
-  centercolor=colorForO
-}
-
-% =========================================================
-% REGION 4
-% =========================================================
-\baDeclareRegionData[Region 4]{R4}{
-  midcolor=colorForO,
-  leftcolor=colorForF,
-  squarecolor=colorForM,
-  rightcolor=colorForS,
-  centercolor=colorForO
-}
-
-% =========================================================
-% REGION 5
-% =========================================================
-\baDeclareRegionData[Region 5]{R5}{
-  midcolor=colorForO,
-  leftcolor=colorForM,
-  squarecolor=colorForM,
-  rightcolor=colorForS,
-  centercolor=colorForO
-}
-
-\baDeclareRegionData[Region 5c]{R5c}{
-  midcolor=colorForO,
-  leftcolor=colorForO,
-  squarecolor=colorForM,
-  rightcolor=colorForS,
-  centercolor=colorForO
-}
-
-% =========================================================
-% REGION 6
-% =========================================================
-\baDeclareRegionData[Region 6c]{R6c}{
-  midcolor=colorForO,
-  leftcolor=colorForO,
-  squarecolor=colorForO,
-  rightcolor=colorForS,
-  centercolor=colorForO
-}
-
-\baDeclareRegionData[Region 6]{R6}{
-  midcolor=colorForO,
-  leftcolor=colorForS,
-  squarecolor=colorForS,
-  rightcolor=colorForS,
-  centercolor=colorForO
-}
-
-
-\baAtlasFigure[MoM Diagram]{Center_Corridor_Region}
-  {R1,R2,R3,R3c,R4,R5,R5c,R6c,R6}
-  {MoM}
-
-\caption{Name-based region test using semantic color mappings.}
-
-\end{bifurcationatlas}
-\begin{bifurcationatlas}[region scale = 0.4, region radius = 5,figure scale = 0.25]
-% =========================================================
-% REGION 7
-% =========================================================
-\baDeclareRegionData[Region $7^-$]{R7_1}{
-  midcolor=colorForO,
-  leftcolor=colorForF,
-  squarecolor=colorForS,
-  rightcolor=colorForS,
-  centercolor=colorForO
-}
-
-\baDeclareRegionData[Region $7^+$]{R7_2}{
-  midcolor=colorForO,
-  leftcolor=colorForF,
-  squarecolor=colorForF,
-  rightcolor=colorForS,
-  centercolor=colorForO
-}
-
-% =========================================================
-% REGION 8
-% =========================================================
-\baDeclareRegionData[Region 12]{R12}{
-  midcolor=colorForS,
-  leftcolor=colorForS,
-  squarecolor=colorForS,
-  rightcolor=colorForS,
-  centercolor=transparent
-}
-
-\baDeclareRegionData[Region 12c]{R12c}{
-  midcolor=colorForS,
-  leftcolor=colorForS,
-  squarecolor=colorForS,
-  rightcolor=colorForS,
-  centercolor=colorForC
-}
-
-% =========================================================
-% REGION 9
-% =========================================================
-\baDeclareRegionData[Region 11]{R11}{
-  midcolor=colorForF,
-  leftcolor=colorForF,
-  squarecolor=colorForS,
-  rightcolor=colorForS,
-  centercolor=transparent
-}
-
-% =========================================================
-% REGION 10
-% =========================================================
-\baDeclareRegionData[Region 10]{R10}{
-  midcolor=colorForF,
-  leftcolor=colorForF,
-  squarecolor=colorForF,
-  rightcolor=colorForF,
-  centercolor=transparent
-}
-
-% =========================================================
-% REGION 11
-% =========================================================
-\baDeclareRegionData[Region 9]{R9}{
-  midcolor=colorForS,
-  leftcolor=colorForF,
-  squarecolor=colorForS,
-  rightcolor=colorForS,
-  centercolor=transparent
-}
-
-% =========================================================
-% REGION 12
-% =========================================================
-\baDeclareRegionData[Region 8]{R8}{
-  midcolor=colorForM,
-  leftcolor=colorForF,
-  squarecolor=colorForM,
-  rightcolor=colorForS,
-  centercolor=colorForO
-}
-\baAtlasFigure[MoM Diagram (second part)]{Center_Corridor_Region}
-  {R7_1,R7_2,R8,R9,R10,R11,R12,R12c}
-  {MoM}
-
-\caption{Name-based region test using semantic color mappings.}
-
-\end{bifurcationatlas}
 \end{document}

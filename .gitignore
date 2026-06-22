@@ -5,6 +5,7 @@
 *.synctex.gz
 *.pdf
 
+outdated/
 # but NOT in this folder
 !examples/fig/
 !examples/fig/*.pdf
