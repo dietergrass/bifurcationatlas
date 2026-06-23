@@ -10,6 +10,7 @@
 \RequirePackage{pgffor}
 \RequirePackage{newfloat}
 \RequirePackage{ifthen}
+\usetikzlibrary{positioning}
 
 % =========================================================
 % COUNTERS AND BASIC FORMATTING
@@ -26,6 +27,8 @@
   \ref{sub@#1}%
 }
 
+\newlength{\baSubfigureCaptionSkip}
+\setlength{\baSubfigureCaptionSkip}{0.6\baselineskip}
 
 % Transparent placeholder color
 \colorlet{transparent}{white!0}
@@ -39,6 +42,7 @@
 % =========================================================
 \def\ba@atlas@list{}
 \def\ba@path@region{/ba/\ba@atlas@current/region}
+\def\ba@label@format{\alph}
 
 % =========================================================
 % HELPER UTILITIES
@@ -185,8 +189,12 @@
   /ba/core/caption/.is family,
   /ba/core/caption,
   size/.initial=\normalsize,
-  shift/.initial=0pt,
-  label-format/.initial=arabic,
+  skip/.code={\setlength{\baSubfigureCaptionSkip}{#1}},
+  label-format/.is choice,
+  label-format/arabic/.code = {\def\ba@label@format{\arabic}},
+  label-format/roman/.code  = {\def\ba@label@format{\roman}},
+  label-format/Roman/.code  = {\def\ba@label@format{\Roman}},
+  label-format/alph/.code   = {\def\ba@label@format{\alph}},
 }
 
 % ---------------------------------------------------------
@@ -196,6 +204,7 @@
   /ba/config/.is family,
   /ba/config,
   debug/.is if=ba@debug,
+  debug=false,
   region scale/.code={
     \pgfkeys{/ba/core/region/scale=#1}%
   },
@@ -208,8 +217,8 @@
   caption style/.code={
     \pgfkeys{/ba/core/caption/size=#1}%
   },
-  caption shift/.code={
-    \pgfkeys{/ba/core/caption/shift=#1}%
+  caption skip/.code={
+    \pgfkeys{/ba/core/caption/skip=#1}%
   },
   caption label/.code={
     \pgfkeys{/ba/core/caption/label-format=#1}%
@@ -382,15 +391,7 @@
   \pgfkeysvalueof{/ba/core/caption/size}%
 }
 
-\newcommand{\baGetCaptionShift}{%
-  \pgfkeysvalueof{/ba/core/caption/shift}%
-}
-
-\newcommand{\baGetLabelFormat}{%
-  \expandafter\csname
-    \pgfkeysvalueof{/ba/core/caption/label-format}%
-  \endcsname%
-}
+\newcommand{\baGetLabelFormat}{\ba@label@format}
 
 % =========================================================
 % LAYOUT HELPERS
@@ -414,24 +415,27 @@
   % Render all regions in a radial layout
   \foreach \r [count=\i] in {#1}{%
     \refstepcounter{basubfigure}%
-    %\ba@setlabel{\baRegionLabel{\r}}%
     \label{\baRegionLabel{\r}}
 	\ba@writesublabel{\baRegionLabel{\r}}
 	
     \edef\baTmpCaption{\baRegionCaption{\r}}%
 
     \baPlaceRadialNode{\i}{\baLastIndex}{%
-      \begin{tabular}{c}
-        \baRenderRegion{\r}\\[2mm]
-        \if\relax\detokenize{\baTmpCaption}\relax
-        \else
-          {\baGetCaptionSize \basubcaptionformat~\baTmpCaption}\\\\
-        \fi
-      \end{tabular}
+    	\baSubfigure{\baRenderRegion{\r}}{\baTmpCaption}
     }%
   }%
 }
 
+\newcommand{\baSubfigure}[2]{%
+  \begin{tabular}{@{}c@{}}%
+    #1\\
+    \noalign{\vskip \baSubfigureCaptionSkip}
+    \if\relax\detokenize{#2}\relax
+    \else
+      {\baGetCaptionSize\basubcaptionformat~#2}%
+    \fi
+  \end{tabular}%
+}
 % =========================================================
 % ATLAS FIGURE
 % =========================================================
@@ -448,27 +452,28 @@
   }%
   \edef\ba@caption{\pgfkeysvalueof{/ba/input/caption}}%
   \edef\ba@label{\pgfkeysvalueof{/ba/input/label}}%
-
-  \begin{tikzpicture}
-
-    % Background bifurcation diagram
-    \node (bg) at (0,0)
-      {\includegraphics[scale=\baGetFigureScale]{#2}};
-
-    % Atlas-level label and optional caption
-    \refstepcounter{basubfigure}%
-    %\ba@setlabel{\ba@label}%
-    \label{\ba@label}
-    \ba@writesublabel{\ba@label}
-    
-    \if\relax\detokenize{\ba@caption}\relax\else
-      \node[anchor=north]
-        at ([yshift=-\baGetCaptionShift]bg.south)
-        {\baGetCaptionSize\basubcaptionformat~\ba@caption};
-    \fi
-
-    % Radial overlay
-    \baRadialAtlas{#3}
-
-  \end{tikzpicture}
+	\begin{tikzpicture}[baseline=(current bounding box.center)]
+	
+	% -------------------------------------------------
+	% CONTENT FIRST (no artificial bounding box yet)
+	% -------------------------------------------------
+	
+	\node (bg) {\includegraphics[scale=\baGetFigureScale]{#2}};
+	
+	\refstepcounter{basubfigure}%
+	\label{\ba@label}
+	\ba@writesublabel{\ba@label}
+	
+	\if\relax\detokenize{\ba@caption}\relax\else
+	  \node[below=\baSubfigureCaptionSkip of bg] (cap)
+	    {\baGetCaptionSize\basubcaptionformat~\ba@caption};
+	\fi
+	
+	\baRadialAtlas{#3}
+	
+	\ifba@debug
+	  \draw[red](current bounding box.south west)rectangle(current bounding box.north east);
+	\fi
+	
+	\end{tikzpicture}
 }

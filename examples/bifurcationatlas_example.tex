@@ -4,19 +4,26 @@
 % (1) CORE PACKAGES
 % =========================================================
 % bifurcationatlas:
-%   Provides:
-%   - \baPic
-%   - \baNewRegion
-%   - \baNewRegionData
-%   - \baAtlasFigure
-%   - \baRadialAtlas
-%   - \baSetup
+%   Main package providing the atlas system.
+%
+%   Core user-level commands:
+%   - \initAtlas        : define reusable atlas templates
+%   - \setAtlas         : select active atlas template
+%   - \baNewRegion      : define labeled regions with metadata
+%   - \baAtlasFigure    : render central bifurcation diagram
+%   - \baRadialAtlas    : internal radial layout engine
+%   - \baSetup          : global configuration interface
 %
 % graphicx:
-%   External image inclusion (bifurcation diagrams etc.)
+%   Standard image inclusion (used for center diagrams)
+%
+% geometry:
+%   Page layout control (ensures symmetric margins for figures)
 % =========================================================
+
 \usepackage{bifurcationatlas}
 \usepackage{graphicx}
+\usepackage[margin=2.5cm,centering]{geometry}
 
 \graphicspath{{./fig/}}
 
@@ -24,11 +31,14 @@
 % (2) GLOBAL COLOR DEFINITIONS
 % =========================================================
 % Semantic color system:
-% - Equilibria types (HHEqui, LLEqui, etc.)
-% - Stability classes (Stable, Unstable, etc.)
-% - Semantic rendering palette (colorForO, etc.)
+%
+% Colors encode dynamical meaning rather than aesthetics:
+% - Stability classes: Stable / Unstable / Saddle / Focus
+% - Equilibrium families: HHEqui, HLEqui, MEqui, LLEqui, TEqui
+%
+% This allows model-independent visualization where
+% color = semantic state, not arbitrary styling.
 % =========================================================
-
 
 % --- stability palette ---
 \definecolor{Stable}{RGB}{0,110,0}
@@ -37,36 +47,54 @@
 \definecolor{Focus}{RGB}{102,102,255}
 \definecolor{Periodic}{RGB}{26,26,255}
 
-
-\definecolor{HHEqui}{RGB}{0, 114, 178}
-\definecolor{HLEqui}{RGB}{230, 159, 0}
-\definecolor{MEqui}{RGB}{0, 158, 115}
-\definecolor{LLEqui}{RGB}{204, 121, 167}
-\definecolor{TEqui}{RGB}{213, 94, 0}
+% --- equilibrium-type palette ---
+\definecolor{HHEqui}{RGB}{0,114,178}
+\definecolor{HLEqui}{RGB}{230,159,0}
+\definecolor{MEqui}{RGB}{0,158,115}
+\definecolor{LLEqui}{RGB}{204,121,167}
+\definecolor{TEqui}{RGB}{213,94,0}
 
 % =========================================================
-% (3) TIKZ TEMPLATE SYSTEM (PIC DEFINITIONS)
+% (3) ATLAS TEMPLATE SYSTEM (GEOMETRIC DEFINITIONS)
 % =========================================================
-% Each \baPic defines a reusable geometric template.
-% Color injection is done via \baGetColor{index}.
+%
+% Each \initAtlas defines a reusable geometric layout:
+% - region identifiers (e.g., LL, HL, M, HH, C)
+% - TikZ drawing instructions per region
+% - semantic mapping to colors via \baColor{<key>}
+%
+% This separates:
+%   geometry (structure)
+%   from
+%   data (region labeling)
 % =========================================================
 
+% ---------------------------------------------------------
+% TEMPLATE: Cartel (5-region structured system)
+% ---------------------------------------------------------
 \initAtlas{Cartel}{LL,HL,M,HH,C}{
+  % base blocks (semantic color injection)
   \fill[\baColor{LL}] (0,0) rectangle (1,1);
   \fill[\baColor{HL}] (1,0) rectangle (2,1);
-  \fill[\baColor{M}] (0,1) rectangle (1,2);
+  \fill[\baColor{M}]  (0,1) rectangle (1,2);
   \fill[\baColor{HH}] (1,1) rectangle (2,2);
 
-  % refinement layer (highest priority)
+  % refinement region (high-resolution structure)
   \fill[\baColor{C}] (0,0) rectangle (0.5,0.5);
 
+  % structural grid overlay
   \draw[line width=2pt,black] (0,2)--(0,0)--(2,0);
   \draw (0,1)--(2,1);
   \draw (1,0)--(1,2);
+
+  % refinement grid
   \draw (0,0.5)--(0.5,0.5);
   \draw (0.5,0)--(0.5,0.5);
+
+  % highlight boundary
   \draw[line width=2pt,red] (0,0.04)--(0,2);
 }
+
 % ---------------------------------------------------------
 % TEMPLATE: SimpleState (2-region system)
 % ---------------------------------------------------------
@@ -74,56 +102,115 @@
   \fill[\baColor{SL}] (0,0) rectangle (1,2);
   \fill[\baColor{SR}] (1,0) rectangle (2,2);
 }
+
+% =========================================================
+% (4) GLOBAL CONFIGURATION
+% =========================================================
+%
+% These parameters define global rendering behavior:
+% - region scale  : scaling of individual region diagrams
+% - region radius : radial placement radius in atlas layout
+% - figure scale  : scaling of central bifurcation diagram
+% - debug         : enables overlay diagnostics
+% =========================================================
+
 \baSetup{
   region scale = 1.25,
   region radius = 6.75,
   figure scale = 0.35,
-  debug=true,
+  debug = false,
 }
 
-
 % =========================================================
-% (4) DOCUMENT SETUP
+% (5) DOCUMENT START
 % =========================================================
 \begin{document}
 
 % =========================================================
-% (5) ATLAS BLOCK: STANDARD TEMPLATE EXAMPLE
+% (6) ATLAS EXAMPLE 1: SimpleState (arabic labels)
 % =========================================================
 \begin{bifurcationatlas}[region scale = 1.5]
 \label{ba:simplestate}
 \setAtlas{SimpleState}
+\centering
 
+% Define regions (data layer), default color is transparent
 \baNewRegion[caption={Region 1},label={ba:R1}]{R1}{SL=Unstable}
 \baNewRegion[caption={Region 2},label={ba:R2}]{R2}{SL=Stable,SR=Unstable}
 \baNewRegion[caption={Region 3},label={ba:R3}]{R3}{SL=Stable,SR=Focus}
 
+% Central bifurcation diagram + radial overlay
 \baAtlasFigure[caption={Cartel Diagram},label=ba:center]{Center_Corridor_Region}{R1,R2,R3}
+
 \end{bifurcationatlas}
+
+% =========================================================
+% (7) ATLAS EXAMPLE 2: SimpleState (roman labels)
+% =========================================================
 \begin{bifurcationatlas}[caption label=roman]
 \label{ba:simplestate2}
 \setAtlas{SimpleState}
+\centering
 
 \baNewRegion[caption={Region A},label={ba2:R1}]{R1}{SL=Stable,SR=Focus}
 \baNewRegion[caption={Region B},label={ba2:R2}]{R2}{SL=Unstable,SR=Unstable}
 \baNewRegion[caption={Region C},label={ba2:R3}]{R3}{SL=Periodic,SR=Focus}
 
 \baAtlasFigure[caption={Cartel Diagram Second},label=ba2:center]{Center_Corridor_Region}{R1,R2,R3}
+
 \end{bifurcationatlas}
-\begin{bifurcationatlas}[caption label=alph]
+
+% =========================================================
+% (8) ATLAS EXAMPLE 3: Cartel (upper roman labels)
+% =========================================================
+\begin{bifurcationatlas}[caption label=Roman]
 \label{ba:cartel}
 \setAtlas{Cartel}
-%
-\baNewRegion[caption={Cartel Region 1},label={ba:cartel_R1}]{R1}{LL=LLEqui,HL=HLEqui,M=HHEqui,HH=HHEqui,C=TEqui}
-\baNewRegion[caption={Cartel Region 2},label={ba:cartel_R2}]{R2}{LL=LLEqui,HL=HLEqui,M=MEqui,HH=HHEqui,C=TEqui}
-\baNewRegion[caption={Cartel Region 3},label={ba:cartel_R3}]{R3}{LL=LLEqui,HL=HLEqui,M=MEqui,HH=MEqui,C=TEqui}
-\baNewRegion[caption={Cartel Region 4},label={ba:cartel_R4}]{R4}{LL=LLEqui,HL=HLEqui,M=HLEqui,HH=HLEqui,C=HLEqui}
-\baNewRegion[caption={Cartel Region 5},label={ba:cartel_R5}]{R5}{LL=LLEqui,HL=LLEqui,M=LLEqui,HH=TEqui,C=TEqui}
-\baNewRegion[caption={Cartel Region 6},label={ba:cartel_R6}]{R6}{LL=LLEqui,HL=LLEqui,M=TEqui,HH=TEqui,C=HLEqui}
+\centering
+
+% Dense semantic mapping example (multi-parameter system)
+\baNewRegion[caption={Cartel Region 1},label={ba:cartel_R1}]
+  {R1}{LL=LLEqui,HL=HLEqui,M=HHEqui,HH=HHEqui,C=TEqui}
+
+\baNewRegion[caption={Cartel Region 2},label={ba:cartel_R2}]
+  {R2}{LL=LLEqui,HL=HLEqui,M=MEqui,HH=HHEqui,C=TEqui}
+
+\baNewRegion[caption={Cartel Region 3},label={ba:cartel_R3}]
+  {R3}{LL=LLEqui,HL=HLEqui,M=MEqui,HH=MEqui,C=TEqui}
+
+\baNewRegion[caption={Cartel Region 4},label={ba:cartel_R4}]
+  {R4}{LL=LLEqui,HL=HLEqui,M=HLEqui,HH=HLEqui,C=HLEqui}
+
+\baNewRegion[caption={Cartel Region 5},label={ba:cartel_R5}]
+  {R5}{LL=LLEqui,HL=LLEqui,M=LLEqui,HH=TEqui,C=TEqui}
+
+\baNewRegion[caption={Cartel Region 6},label={ba:cartel_R6}]
+  {R6}{LL=LLEqui,HL=LLEqui,M=TEqui,HH=TEqui,C=HLEqui}
+
+% Central diagram for full atlas
 \baAtlasFigure[caption={Cartel Bifurcation Diagram (roman)},label={ba:cartel_center}]{bifurcation}{R1,R2,R3,R4,R5,R6}
+
+% Global caption for interpretation
+\caption{Name-based region test using semantic color mappings.}
+
 \end{bifurcationatlas}
-\ref{ba:simplestate2}, Subfigure~\ref{ba2:center}, \ref{ba:cartel}, Subfigure~\ref{ba:cartel_R2}, \subref{ba:cartel_R5}
+
+% =========================================================
+% (9) ILLUSTRATIVE DISCUSSION SECTION (FAKE EXAMPLE TEXT)
+% =========================================================
+\section{Illustrative Comparison of Atlas Constructions}
+
+To demonstrate the flexibility of the bifurcation atlas framework, we compare several structurally distinct atlas configurations introduced in this example.
+
+\ref{ba:simplestate2} shows a simple two-region decomposition using the \texttt{SimpleState} template. The radial arrangement in Subfigure~\ref{ba2:center} illustrates how even minimal structural complexity already yields a meaningful separation of dynamical regimes.
+
+In contrast, \ref{ba:cartel} presents a higher-dimensional semantic decomposition using the \texttt{Cartel} template. Here, multiple equilibrium classes interact across six regions with heterogeneous stability properties. A representative region-level structure can be seen in Subfigure~\ref{ba:cartel_R2}, which highlights the coexistence of unstable and periodic dynamics within a single parameter block.
+
+The radial organization further emphasizes global coherence: individual regions such as \subref{ba:cartel_R5} are not isolated visual elements but contribute to a consistent global phase organization around the central bifurcation diagram.
+
+Overall, the comparison between the SimpleState and Cartel atlases illustrates the scalability of the framework from minimal binary decompositions to rich multi-class semantic partitions. This is particularly visible when comparing the compact structure of \ref{ba:simplestate2} with the densely structured atlas in \ref{ba:cartel}.
 % =========================================================
 % END DOCUMENT
 % =========================================================
+
 \end{document}
