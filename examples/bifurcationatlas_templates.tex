@@ -1,0 +1,99 @@
+% =========================================================
+% (2) GLOBAL COLOR DEFINITIONS
+% =========================================================
+% Semantic color system:
+%
+% Colors encode dynamical meaning rather than aesthetics:
+% - Stability classes: Stable / Unstable / Saddle / Focus
+% - Equilibrium families: HHEqui, HLEqui, MEqui, LLEqui, TEqui
+%
+% This allows model-independent visualization where
+% color = semantic state, not arbitrary styling.
+% =========================================================
+
+% --- stability palette ---
+\definecolor{Stable}{RGB}{0,110,0}
+\definecolor{Unstable}{RGB}{255,77,77}
+\definecolor{Saddle}{RGB}{255,165,0}
+\definecolor{Focus}{RGB}{102,102,255}
+\definecolor{Periodic}{RGB}{26,26,255}
+
+% --- equilibrium-type palette ---
+\definecolor{HHEqui}{RGB}{0,114,178}
+\definecolor{HLEqui}{RGB}{230,159,0}
+\definecolor{MEqui}{RGB}{0,158,115}
+\definecolor{LLEqui}{RGB}{204,121,167}
+\definecolor{TEqui}{RGB}{213,94,0}
+
+% =========================================================
+% (3) ATLAS TEMPLATE SYSTEM (GEOMETRIC DEFINITIONS)
+% =========================================================
+%
+% Each \initAtlas defines a reusable geometric layout:
+% - region identifiers (e.g., LL, HL, M, HH, C)
+% - TikZ drawing instructions per region
+% - semantic mapping to colors via \baColor{<key>}
+%
+% This separates:
+%   geometry (structure)
+%   from
+%   data (region labeling)
+% =========================================================
+
+% ---------------------------------------------------------
+% TEMPLATE: Cartel (5-region structured system)
+% ---------------------------------------------------------
+\initAtlas{Cartel}{LL,HL,M,HH,C}{
+  % base blocks (semantic color injection)
+  \fill[\baColor{LL}] (0,0) rectangle (1,1);
+  \fill[\baColor{HL}] (1,0) rectangle (2,1);
+  \fill[\baColor{M}]  (0,1) rectangle (1,2);
+  \fill[\baColor{HH}] (1,1) rectangle (2,2);
+
+  % refinement region (high-resolution structure)
+  \fill[\baColor{C}] (0,0) rectangle (0.5,0.5);
+
+  % structural grid overlay
+  \draw[line width=2pt,black] (0,2)--(0,0)--(2,0);
+  \draw (0,1)--(2,1);
+  \draw (1,0)--(1,2);
+
+  % refinement grid
+  \draw (0,0.5)--(0.5,0.5);
+  \draw (0.5,0)--(0.5,0.5);
+
+  % highlight boundary
+  \draw[line width=2pt,red] (0,0.04)--(0,2);
+}
+
+% ---------------------------------------------------------
+% TEMPLATE: SimpleState (2-region system)
+% ---------------------------------------------------------
+\initAtlas{SimpleState}{SL,SR}{
+  \fill[\baColor{SL}] (0,0) rectangle (1,2);
+  \fill[\baColor{SR}] (1,0) rectangle (2,2);
+}
+
+% ---------------------------------------------------------
+% TEMPLATE: Circles
+% ---------------------------------------------------------
+\initAtlas{Circles}{NorthWest,NorthEast,SouthWest,SouthEast,Center}{
+  \fill[\baColor{NorthWest}] (-1, 1) circle (0.35);
+  \fill[\baColor{NorthEast}] ( 1, 1) circle (0.35);
+  \fill[\baColor{SouthWest}] (-1,-1) circle (0.35);
+  \fill[\baColor{SouthEast}] ( 1,-1) circle (0.35);
+  \fill[\baColor{Center}]    ( 0, 0) circle (0.45);
+
+  \node at (-1, 1) {\tiny NW};
+  \node at ( 1, 1) {\tiny NE};
+  \node at (-1,-1) {\tiny SW};
+  \node at ( 1,-1) {\tiny SE};
+  \node at ( 0, 0) {\tiny C};
+
+  \draw (-1, 1) circle (0.35);
+  \draw ( 1, 1) circle (0.35);
+  \draw (-1,-1) circle (0.35);
+  \draw ( 1,-1) circle (0.35);
+  \draw ( 0, 0) circle (0.45);
+}
+

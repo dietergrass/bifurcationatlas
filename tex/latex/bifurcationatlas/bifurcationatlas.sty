@@ -12,21 +12,16 @@
 \RequirePackage{ifthen}
 \usetikzlibrary{positioning}
 
-% =========================================================
-% COUNTERS AND BASIC FORMATTING
-% =========================================================
-\newcounter{bafigure}
-\newcounter{basubfigure}[bafigure]
 
-\renewcommand{\thebafigure}{\arabic{bafigure}}
-\renewcommand{\thebasubfigure}{\baGetLabelFormat{basubfigure}}
-\renewcommand{\p@bafigure}{Atlas~}
-\renewcommand{\p@basubfigure}{\thebafigure.}
+% Printed subcaption label
 \newcommand{\basubcaptionformat}{(\thebasubfigure)}
+
+% Subfigure reference
 \newcommand{\subref}[1]{%
   \ref{sub@#1}%
 }
 
+% Caption spacing
 \newlength{\baSubfigureCaptionSkip}
 \setlength{\baSubfigureCaptionSkip}{0.6\baselineskip}
 
@@ -107,7 +102,6 @@
       {Wrap it in bifurcationatlas.}
   \fi
 }
-
 % =========================================================
 % BIFURCATION ATLAS ENVIRONMENT
 % =========================================================
@@ -125,25 +119,47 @@
 
   % activate atlas
   \ba@inatlastrue
-  \stepcounter{basubfigure}
+  \stepcounter{bafigure}
+  \setcounter{basubfigure}{0}
 
   % ------------------------------------------------------
   % FIX 1: IMMUTABLE ATLAS BASE (core correction)
   % ------------------------------------------------------
-  \edef\ba@atlasbase{ba@\thebafigure}%
 
   % reset counters
-  \setcounter{basubfigure}{0}
+  %\setcounter{basubfigure}{0}
 
   \begin{bifurcationatlasfloat}
-  \refstepcounter{bafigure}
-
+	
 }
 {%
+	\ifnum\value{bafigure}=\value{bifurcationatlasfloat}
+	  % they are equal
+	\else
+	  \caption{}
+	\fi
   \end{bifurcationatlasfloat}
   \ba@inatlasfalse
 
   \endgroup
+}
+
+% =========================================================
+% COUNTERS AND BASIC FORMATTING
+% =========================================================
+% Subfigure counter (reset for each atlas float)
+\newcounter{bafigure}
+\newcounter{basubfigure}[bifurcationatlasfloat]
+
+% Main numbering comes from the float
+\renewcommand{\thebasubfigure}{%
+  \baGetLabelFormat{basubfigure}%
+}
+
+% Prefixes for \ref
+\renewcommand{\p@bifurcationatlasfloat}{Atlas~}
+\renewcommand{\p@basubfigure}{%
+  \thebifurcationatlasfloat.%
 }
 
 % =========================================================
@@ -291,7 +307,12 @@
 
 % Split a key=value pair and store it in the region color tree
 \def\ba@setcolorpair#1=#2\relax#3#4{%
-  \pgfkeys{#4/#3/color/#1={#2}}%
+  \edef\ba@key{\zap@space#1 \@empty}%
+  \edef\ba@val{\zap@space#2 \@empty}%
+  \ifba@debug
+    \typeout{ba@setcolorpair DEBUG: key='\ba@key', value='\ba@val', region='#3', path='#4'}%
+  \fi
+  \pgfkeys{#4/#3/color/\ba@key/.expanded={\ba@val}}%
 }
 
 % =========================================================
@@ -424,6 +445,9 @@
     	\baSubfigure{\baRenderRegion{\r}}{\baTmpCaption}
     }%
   }%
+	\ifba@debug
+	  \draw[red](current bounding box.south west)rectangle(current bounding box.north east);
+	\fi
 }
 
 \newcommand{\baSubfigure}[2]{%
@@ -470,10 +494,6 @@
 	\fi
 	
 	\baRadialAtlas{#3}
-	
-	\ifba@debug
-	  \draw[red](current bounding box.south west)rectangle(current bounding box.north east);
-	\fi
-	
+		
 	\end{tikzpicture}
 }

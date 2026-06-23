@@ -27,84 +27,9 @@
 
 \graphicspath{{./fig/}}
 
+\include{bifurcationatlas_templates}
 % =========================================================
-% (2) GLOBAL COLOR DEFINITIONS
-% =========================================================
-% Semantic color system:
-%
-% Colors encode dynamical meaning rather than aesthetics:
-% - Stability classes: Stable / Unstable / Saddle / Focus
-% - Equilibrium families: HHEqui, HLEqui, MEqui, LLEqui, TEqui
-%
-% This allows model-independent visualization where
-% color = semantic state, not arbitrary styling.
-% =========================================================
-
-% --- stability palette ---
-\definecolor{Stable}{RGB}{0,110,0}
-\definecolor{Unstable}{RGB}{255,77,77}
-\definecolor{Saddle}{RGB}{255,165,0}
-\definecolor{Focus}{RGB}{102,102,255}
-\definecolor{Periodic}{RGB}{26,26,255}
-
-% --- equilibrium-type palette ---
-\definecolor{HHEqui}{RGB}{0,114,178}
-\definecolor{HLEqui}{RGB}{230,159,0}
-\definecolor{MEqui}{RGB}{0,158,115}
-\definecolor{LLEqui}{RGB}{204,121,167}
-\definecolor{TEqui}{RGB}{213,94,0}
-
-% =========================================================
-% (3) ATLAS TEMPLATE SYSTEM (GEOMETRIC DEFINITIONS)
-% =========================================================
-%
-% Each \initAtlas defines a reusable geometric layout:
-% - region identifiers (e.g., LL, HL, M, HH, C)
-% - TikZ drawing instructions per region
-% - semantic mapping to colors via \baColor{<key>}
-%
-% This separates:
-%   geometry (structure)
-%   from
-%   data (region labeling)
-% =========================================================
-
-% ---------------------------------------------------------
-% TEMPLATE: Cartel (5-region structured system)
-% ---------------------------------------------------------
-\initAtlas{Cartel}{LL,HL,M,HH,C}{
-  % base blocks (semantic color injection)
-  \fill[\baColor{LL}] (0,0) rectangle (1,1);
-  \fill[\baColor{HL}] (1,0) rectangle (2,1);
-  \fill[\baColor{M}]  (0,1) rectangle (1,2);
-  \fill[\baColor{HH}] (1,1) rectangle (2,2);
-
-  % refinement region (high-resolution structure)
-  \fill[\baColor{C}] (0,0) rectangle (0.5,0.5);
-
-  % structural grid overlay
-  \draw[line width=2pt,black] (0,2)--(0,0)--(2,0);
-  \draw (0,1)--(2,1);
-  \draw (1,0)--(1,2);
-
-  % refinement grid
-  \draw (0,0.5)--(0.5,0.5);
-  \draw (0.5,0)--(0.5,0.5);
-
-  % highlight boundary
-  \draw[line width=2pt,red] (0,0.04)--(0,2);
-}
-
-% ---------------------------------------------------------
-% TEMPLATE: SimpleState (2-region system)
-% ---------------------------------------------------------
-\initAtlas{SimpleState}{SL,SR}{
-  \fill[\baColor{SL}] (0,0) rectangle (1,2);
-  \fill[\baColor{SR}] (1,0) rectangle (2,2);
-}
-
-% =========================================================
-% (4) GLOBAL CONFIGURATION
+% (2) GLOBAL CONFIGURATION
 % =========================================================
 %
 % These parameters define global rendering behavior:
@@ -122,12 +47,12 @@
 }
 
 % =========================================================
-% (5) DOCUMENT START
+% (3) DOCUMENT START
 % =========================================================
 \begin{document}
 
 % =========================================================
-% (6) ATLAS EXAMPLE 1: SimpleState (arabic labels)
+% (4) ATLAS EXAMPLE 1: SimpleState (arabic labels)
 % =========================================================
 \begin{bifurcationatlas}[region scale = 1.5]
 \label{ba:simplestate}
@@ -145,7 +70,7 @@
 \end{bifurcationatlas}
 
 % =========================================================
-% (7) ATLAS EXAMPLE 2: SimpleState (roman labels)
+% (5) ATLAS EXAMPLE 2: SimpleState (roman labels)
 % =========================================================
 \begin{bifurcationatlas}[caption label=roman]
 \label{ba:simplestate2}
@@ -157,11 +82,12 @@
 \baNewRegion[caption={Region C},label={ba2:R3}]{R3}{SL=Periodic,SR=Focus}
 
 \baAtlasFigure[caption={Cartel Diagram Second},label=ba2:center]{Center_Corridor_Region}{R1,R2,R3}
+\caption{This shows a change of the labeling.}
 
 \end{bifurcationatlas}
 
 % =========================================================
-% (8) ATLAS EXAMPLE 3: Cartel (upper roman labels)
+% (6) ATLAS EXAMPLE 3: Cartel (upper roman labels)
 % =========================================================
 \begin{bifurcationatlas}[caption label=Roman]
 \label{ba:cartel}
@@ -195,6 +121,104 @@
 
 \end{bifurcationatlas}
 
+
+% =========================================================
+% (7) ATLAS EXAMPLE 4: Circles
+% =========================================================
+
+\begin{bifurcationatlas}[region scale=0.8, region radius=5]
+\label{ba:round_cartel}
+\setAtlas{Circles}
+\centering
+
+\baNewRegion[caption={The Quiet Gate},label={ba:rc_R1}]{R1}{
+  NorthWest=Stable,NorthEast=Stable,SouthWest=Stable,SouthEast=Stable,Center=Stable
+}
+
+\baNewRegion[
+  caption={The Cracked Horizon},
+  label={ba:rc_R2}
+]{R2}{
+  NorthWest=Stable,
+  NorthEast=Unstable,
+  SouthWest=Stable,
+  SouthEast=Stable,
+  Center=Stable
+}
+
+\baNewRegion[
+  caption={The First Disturbance},
+  label={ba:rc_R3}
+]{R3}{
+  NorthWest=Stable,
+  NorthEast=Unstable,
+  SouthWest=Saddle,
+  SouthEast=Focus,
+  Center=Stable
+}
+
+\baNewRegion[
+  caption={The Shifting Mirror},
+  label={ba:rc_R4}
+]{R4}{
+  NorthWest=Stable,
+  NorthEast=Unstable,
+  SouthWest=Saddle,
+  SouthEast=Focus,
+  Center=Stable
+}
+
+\baNewRegion[
+  caption={The Oscillation Wound},
+  label={ba:rc_R5}
+]{R5}{
+  NorthWest=Stable,
+  NorthEast=Unstable,
+  SouthWest=Saddle,
+  SouthEast=Focus,
+  Center=Periodic
+}
+
+\baNewRegion[
+  caption={The Whispering Cycle},
+  label={ba:rc_R6}
+]{R6}{
+  NorthWest=Periodic,
+  NorthEast=Unstable,
+  SouthWest=Saddle,
+  SouthEast=Focus,
+  Center=Stable
+}
+
+\baNewRegion[
+  caption={The Twin Spirals},
+  label={ba:rc_R7}
+]{R7}{
+  NorthWest=Periodic,
+  NorthEast=Periodic,
+  SouthWest=Saddle,
+  SouthEast=Focus,
+  Center=Stable
+}
+
+\baNewRegion[
+  caption={The Eternal Return},
+  label={ba:rc_R8}
+]{R8}{
+  NorthWest=Periodic,
+  NorthEast=Periodic,
+  SouthWest=Periodic,
+  SouthEast=Focus,
+  Center=Stable
+}
+
+\begin{tikzpicture}
+  \baRadialAtlas{R1,R2,R3,R4,R5,R6,R7,R8}
+\end{tikzpicture}
+
+\caption{Atlas illustrating the evolution of stability classes across eight regions.}
+
+\end{bifurcationatlas}
 % =========================================================
 % (9) ILLUSTRATIVE DISCUSSION SECTION (FAKE EXAMPLE TEXT)
 % =========================================================
