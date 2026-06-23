@@ -16,8 +16,6 @@
 %   External image inclusion (bifurcation diagrams etc.)
 % =========================================================
 \usepackage{bifurcationatlas}
-\usepackage{caption}
-\usepackage{subcaption}
 \usepackage{graphicx}
 
 \graphicspath{{./fig/}}
@@ -39,21 +37,12 @@
 \definecolor{Focus}{RGB}{102,102,255}
 \definecolor{Periodic}{RGB}{26,26,255}
 
-% --- semantic mapping palette ---
-\definecolor{colorForO}{RGB}{0,128,128}
-\definecolor{colorForF}{RGB}{255,165,0}
-\definecolor{colorForS}{RGB}{255,105,180}
-\definecolor{colorForM}{RGB}{107,142,35}
-\definecolor{colorForC}{RGB}{255,0,0}
 
 \definecolor{HHEqui}{RGB}{0, 114, 178}
 \definecolor{HLEqui}{RGB}{230, 159, 0}
 \definecolor{MEqui}{RGB}{0, 158, 115}
 \definecolor{LLEqui}{RGB}{204, 121, 167}
 \definecolor{TEqui}{RGB}{213, 94, 0}
-
-\definecolor{LEqui}{RGB}{204, 121, 167}
-\definecolor{HEqui}{RGB}{213, 94, 0}
 
 % =========================================================
 % (3) TIKZ TEMPLATE SYSTEM (PIC DEFINITIONS)
@@ -85,18 +74,18 @@
   \fill[\baColor{SL}] (0,0) rectangle (1,2);
   \fill[\baColor{SR}] (1,0) rectangle (2,2);
 }
-
-
-% =========================================================
-% (4) DOCUMENT SETUP
-% =========================================================
-\begin{document}
 \baSetup{
   region scale = 1.25,
   region radius = 6.75,
   figure scale = 0.35,
   debug=true,
 }
+
+
+% =========================================================
+% (4) DOCUMENT SETUP
+% =========================================================
+\begin{document}
 
 % =========================================================
 % (5) ATLAS BLOCK: STANDARD TEMPLATE EXAMPLE
@@ -105,7 +94,7 @@
 \label{ba:simplestate}
 \setAtlas{SimpleState}
 
-\baNewRegion[caption={Region 1},label={ba:R1}]{R1}{SL=Unstable,SR=Periodic}
+\baNewRegion[caption={Region 1},label={ba:R1}]{R1}{SL=Unstable}
 \baNewRegion[caption={Region 2},label={ba:R2}]{R2}{SL=Stable,SR=Unstable}
 \baNewRegion[caption={Region 3},label={ba:R3}]{R3}{SL=Stable,SR=Focus}
 
@@ -121,7 +110,7 @@
 
 \baAtlasFigure[caption={Cartel Diagram Second},label=ba2:center]{Center_Corridor_Region}{R1,R2,R3}
 \end{bifurcationatlas}
-\begin{bifurcationatlas}[caption label=Roman]
+\begin{bifurcationatlas}[caption label=alph]
 \label{ba:cartel}
 \setAtlas{Cartel}
 %
@@ -133,7 +122,7 @@
 \baNewRegion[caption={Cartel Region 6},label={ba:cartel_R6}]{R6}{LL=LLEqui,HL=LLEqui,M=TEqui,HH=TEqui,C=HLEqui}
 \baAtlasFigure[caption={Cartel Bifurcation Diagram (roman)},label={ba:cartel_center}]{bifurcation}{R1,R2,R3,R4,R5,R6}
 \end{bifurcationatlas}
-panel~\basubref{ba2:R3}, ~\basubref{ba:center}, Figure~\ref{ba:simplestate2} panel\ref{ba2:center}, Figure~\ref{ba:cartel} panel\ref{ba:cartel_R2}
+\ref{ba:simplestate2}, Subfigure~\ref{ba2:center}, \ref{ba:cartel}, Subfigure~\ref{ba:cartel_R2}, \subref{ba:cartel_R5}
 % =========================================================
 % END DOCUMENT
 % =========================================================

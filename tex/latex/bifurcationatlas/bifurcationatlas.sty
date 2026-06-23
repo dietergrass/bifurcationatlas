@@ -7,6 +7,7 @@
 \RequirePackage{tikz}
 \RequirePackage{graphicx}
 \RequirePackage{pgfkeys}
+\RequirePackage{pgffor}
 \RequirePackage{newfloat}
 \RequirePackage{ifthen}
 
@@ -17,10 +18,16 @@
 \newcounter{basubfigure}[bafigure]
 
 \renewcommand{\thebafigure}{\arabic{bafigure}}
-\renewcommand{\thebasubfigure}{\arabic{basubfigure}}
+\renewcommand{\thebasubfigure}{\baGetLabelFormat{basubfigure}}
+\renewcommand{\p@bafigure}{Atlas~}
+\renewcommand{\p@basubfigure}{\thebafigure.}
+\newcommand{\basubcaptionformat}{(\thebasubfigure)}
+\newcommand{\subref}[1]{%
+  \ref{sub@#1}%
+}
+
 
 % Transparent placeholder color
-\definecolor{transparent}{RGB}{0,0,0}
 \colorlet{transparent}{white!0}
 
 % Package switches
@@ -62,29 +69,6 @@
   }%
 }
 
-% Write label metadata and store it in the .aux file
-\newcommand{\ba@setlabel}[1]{%
-  \if\relax\detokenize{#1}\relax\else
-    \protected@write\@auxout{}{%
-      \string\newlabel{#1}%
-      {{\baGetCaptionLabelFormat}{\thepage}}%
-      \string\ba@storelabel{#1}{\thebafigure}{\baGetCaptionLabelFormat}{\thepage}%
-    }%
-  \fi
-}
-
-% Store label data in runtime macros
-\def\ba@storelabel#1#2#3#4{%
-  \expandafter\gdef\csname ba@fig@#1\endcsname{#2}%
-  \expandafter\gdef\csname ba@sub@#1\endcsname{#3}%
-  \expandafter\gdef\csname ba@page@#1\endcsname{#4}%
-}
-
-% Read back the stored subreference
-\newcommand{\basubref}[1]{%
-  \csname ba@sub@#1\endcsname%
-}
-
 % Floating environment for atlas figures
 \DeclareFloatingEnvironment[
   fileext=loa,
@@ -92,6 +76,20 @@
   name=Bifurcation Atlas,
   placement=htbp
 ]{bifurcationatlasfloat}
+
+% Writes the subcaption entry into the .aux file for later use by \subref.
+\newcommand{\ba@writesublabel}[1]{%
+  \begingroup
+  \edef\ba@tmp{#1}%
+  \if\relax\detokenize\expandafter{\ba@tmp}\relax
+    % empty → do nothing
+  \else
+    \protected@write\@auxout{}{%
+      \string\newlabel{sub@#1}{{\thebasubfigure}{\thepage}}%
+    }%
+  \fi
+  \endgroup
+}
 
 % =========================================================
 % ATLAS STATE
@@ -388,11 +386,10 @@
   \pgfkeysvalueof{/ba/core/caption/shift}%
 }
 
-\newcommand{\baGetCaptionLabelFormat}{%
+\newcommand{\baGetLabelFormat}{%
   \expandafter\csname
     \pgfkeysvalueof{/ba/core/caption/label-format}%
-  \endcsname
-  {basubfigure}%
+  \endcsname%
 }
 
 % =========================================================
@@ -417,8 +414,10 @@
   % Render all regions in a radial layout
   \foreach \r [count=\i] in {#1}{%
     \refstepcounter{basubfigure}%
-    \ba@setlabel{\baRegionLabel{\r}}%
-
+    %\ba@setlabel{\baRegionLabel{\r}}%
+    \label{\baRegionLabel{\r}}
+	\ba@writesublabel{\baRegionLabel{\r}}
+	
     \edef\baTmpCaption{\baRegionCaption{\r}}%
 
     \baPlaceRadialNode{\i}{\baLastIndex}{%
@@ -426,7 +425,7 @@
         \baRenderRegion{\r}\\[2mm]
         \if\relax\detokenize{\baTmpCaption}\relax
         \else
-          {\baGetCaptionSize (\baGetCaptionLabelFormat)~\baTmpCaption}\\\\
+          {\baGetCaptionSize \basubcaptionformat~\baTmpCaption}\\\\
         \fi
       \end{tabular}
     }%
@@ -458,11 +457,14 @@
 
     % Atlas-level label and optional caption
     \refstepcounter{basubfigure}%
-    \ba@setlabel{\ba@label}%
+    %\ba@setlabel{\ba@label}%
+    \label{\ba@label}
+    \ba@writesublabel{\ba@label}
+    
     \if\relax\detokenize{\ba@caption}\relax\else
       \node[anchor=north]
         at ([yshift=-\baGetCaptionShift]bg.south)
-        {\baGetCaptionSize (\baGetCaptionLabelFormat)~\ba@caption};
+        {\baGetCaptionSize\basubcaptionformat~\ba@caption};
     \fi
 
     % Radial overlay

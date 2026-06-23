@@ -2,19 +2,20 @@
 
 A structured LaTeX toolkit for building **bifurcation diagram atlases** with:
 
-- radial region layouts
-- reusable TikZ region graphics
-- structured region metadata
+- modular region definitions
+- radial and Cartesian layouts
+- TikZ-based rendering templates
+- structured metadata (caption, label, colors)
 - floating figure support
-- configurable captioning system
+- configurable global and local settings via PGF keys
 
-The package is designed for mathematical visualization workflows, especially in dynamical systems and optimal control.
+The package is designed for scientific visualization in dynamical systems and optimal control.
 
 ---
 
 # 1. Installation
 
-Place `bifurcationatlas.sty` in your project folder or local tex tree:
+Place `bifurcationatlas.sty` in your local project folder or TeX tree:
 
 ```latex
 \usepackage{bifurcationatlas}
@@ -22,86 +23,197 @@ Place `bifurcationatlas.sty` in your project folder or local tex tree:
 
 ---
 
-# 2. Basic Usage
+# 2. Core Concept
+
+A *bifurcation atlas* consists of:
+
+- an **atlas template** (TikZ drawing definition)
+- multiple **regions** with named parameters
+- a **rendering layer** that arranges regions spatially
+- an optional **background bifurcation diagram**
+
+Each atlas is initialized once and then populated with regions.
+
+---
+
+# 3. Atlas Definition
+
+## 3.1 Initialize an Atlas Template
+
+```latex
+\initAtlas{Cartel}{LL,HL,M,HH,C}{
+  \fill[\baColor{LL}] (0,0) rectangle (1,1);
+  \fill[\baColor{HL}] (1,0) rectangle (2,1);
+  \fill[\baColor{M}]  (0,1) rectangle (1,2);
+  \fill[\baColor{HH}] (1,1) rectangle (2,2);
+
+  \draw[line width=2pt] (0,2)--(0,0)--(2,0);
+  \draw (0,1)--(2,1);
+  \draw (1,0)--(1,2);
+}
+```
+
+Arguments:
+
+- atlas name
+- list of variables (color keys)
+- TikZ template body
+
+---
+
+## 3.2 Activate Atlas in Document
 
 ```latex
 \begin{bifurcationatlas}
-
-\baDeclareRegion[Stable equilibrium]{R1}{green,green,green}
-\baDeclareRegion[Unstable branch]{R2}{red,green,red}
-\baDeclareRegion[Mixed stability]{R3}{green,red,green}
-
-\baAtlasFigure[Bifurcation diagram]{bifurcation.pdf}{R1,R2,R3}{MyPic}
-
+\setAtlas{Cartel}
+...
 \end{bifurcationatlas}
 ```
 
 ---
 
-# 3. Atlas Figure Command
+# 4. Region Definition
+
+## 4.1 Create a Region
 
 ```latex
-\baAtlasFigure[caption]{background}{region list}{pic name}
+\baNewRegion[
+  caption={Region 1},
+  label={ba:R1}
+]{R1}{
+  SL=Unstable,
+  SR=Periodic
+}
 ```
 
 Arguments:
 
-- caption (optional): caption below background
-- background: image file
-- region list: comma-separated region IDs
-- pic name: TikZ pic used for rendering
+- optional key–value metadata:
+  - `caption`
+  - `label`
+- region name
+- color mapping list
 
 ---
 
-# 4. Region Declaration
+## 4.2 Example
 
 ```latex
-\baDeclareRegion[caption]{name}{color list}
-```
-
-Example:
-
-```latex
-\baDeclareRegion[Stable region]{R1}{green,green,green}
+\baNewRegion[
+  caption={Stable region},
+  label={ba:R1}
+]{R1}{
+  SL=Stable,
+  SR=Unstable
+}
 ```
 
 ---
 
-# 5. Configuration
+# 5. Atlas Figure
+
+## 5.1 Background + Regions
+
+```latex
+\baAtlasFigure[
+  caption={Cartel Diagram},
+  label=ba:center
+]{background.pdf}{R1,R2,R3}
+```
+
+Arguments:
+
+- optional key–value:
+  - caption
+  - label
+- background image
+- region list
+
+---
+
+# 6. Rendering Regions
+
+Regions are placed using a radial layout:
+
+```latex
+\baRadialAtlas{R1,R2,R3}
+```
+
+Each region is rendered using the active atlas template.
+
+---
+
+# 7. Labeling System
+
+Each region can define:
+
+```latex
+label={ba:R1}
+```
+
+Then referenced via:
+
+```latex
+\ref{ba:R1}
+```
+
+Additionally:
+
+```latex
+\basubref{ba:R1}
+```
+
+returns the **subfigure index** of the region.
+
+---
+
+# 8. Configuration System
+
+Global configuration is handled via:
 
 ```latex
 \baSetup{
   region scale = 1.25,
-  region radius = 6,
+  region radius = 6.5,
+  figure scale = 0.35,
   caption style = \scriptsize,
-  figure scale = 0.25,
   caption shift = -3mm,
-  caption label = roman
+  caption label = roman,
+  debug = true
 }
 ```
 
 ---
 
-# 6. Caption Styles
+## 8.1 Available Options
 
-- alpha → (a), (b), (c)
-- roman → (i), (ii), (iii)
-- Roman → (I), (II), (III)
-- arabic → (1), (2), (3)
-
----
-
-# 7. TikZ Pics
-
-```latex
-\baNewPic{MyPic}{
-  \draw[thick] (0,0) circle (1);
-}
-```
+| Key | Description |
+|-----|-------------|
+| `region scale` | scaling of region drawings |
+| `region radius` | radial layout radius |
+| `figure scale` | background image scale |
+| `caption style` | caption font size |
+| `caption shift` | vertical caption shift |
+| `caption label` | labeling style (arabic, roman, Roman, alpha) |
 
 ---
 
-# 8. Floating Environment
+# 9. Caption Styles
+
+Supported formats:
+
+| Style | Output |
+|------|--------|
+| `arabic` | (1), (2), (3) |
+| `roman` | (i), (ii), (iii) |
+| `Roman` | (I), (II), (III) |
+| `alpha` | (a), (b), (c) |
+
+---
+
+# 10. Floating Environment
+
+The atlas behaves like a figure:
 
 ```latex
 \begin{bifurcationatlas}
@@ -109,35 +221,66 @@ Example:
 \end{bifurcationatlas}
 ```
 
-Behaves like a figure with list support.
+It is internally based on a floating environment and supports numbering and referencing.
 
 ---
 
-# 9. Internal Design
-
-- State layer: counters and environment control
-- Config layer: pgfkeys interface
-- Rendering layer: TikZ layout engine
-
----
-
-# 10. Example
+# 11. Complete Example
 
 ```latex
-\begin{bifurcationatlas}
+\initAtlas{SimpleState}{SL,SR}{
+  \fill[\baColor{SL}] (0,0) rectangle (1,2);
+  \fill[\baColor{SR}] (1,0) rectangle (2,2);
+}
 
-\baDeclareRegion{R1}{green,green,green}
-\baDeclareRegion{R2}{red,green,red}
+\begin{bifurcationatlas}[region scale=1.5]
+\setAtlas{SimpleState}
 
-\baAtlasFigure{bifurcation.pdf}{R1,R2}{MyPic}
+\baNewRegion[
+  caption={Left state},
+  label={ba:R1}
+]{R1}{SL=Stable,SR=Unstable}
+
+\baNewRegion[
+  caption={Right state},
+  label={ba:R2}
+]{R2}{SL=Unstable,SR=Stable}
+
+\baAtlasFigure[
+  caption={Simple bifurcation diagram},
+  label=ba:center
+]{diagram.pdf}{R1,R2}
 
 \end{bifurcationatlas}
 ```
 
 ---
 
-# Future Extensions
+# 12. Internal Design
+
+The package is structured into three layers:
+
+### State Layer
+- counters (`bafigure`, `basubfigure`)
+- atlas registry
+
+### Configuration Layer
+- `/ba/core/*` (global parameters)
+- `/ba/config` (user interface)
+
+### Rendering Layer
+- TikZ atlas templates
+- radial layout engine
+- region compiler
+
+---
+
+# 13. Future Extensions
+
+Planned features:
 
 - stability overlays
-- multi-layer bifurcation diagrams
-- Julia/Python integration
+- multi-layer atlases
+- dynamic TikZ recomposition
+- external Julia/Python coupling
+- automatic bifurcation detection hooks
